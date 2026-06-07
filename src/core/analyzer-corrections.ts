@@ -21,7 +21,7 @@ import { redactFields } from './redact';
    ════════════════════════════════════════════════════════════════════ */
 
 /** Signals a user is correcting the model's output. */
-const CORRECTION_RE = /(that'?s not|fix (this|the|my|that)|wrong|incorrect|actually i meant|try again|redo|this doesn'?t work|not what I|not correct|still (not|wrong)|didn'?t work|that'?s not right|no[.,]\s+(that|this|it)|please fix|try a different|also add|while you'?re at it|one more thing|additionally|could you also)/i;
+const CORRECTION_RE = /(that'?s not|fix (this|the|my|that)|wrong|incorrect|actually i meant|try again|redo|this doesn'?t work|not what I|not correct|still (not|wrong)|didn'?t work|that'?s not right|no[.,]\s+(that|this|it)|please fix|try a different|also add|while you'?re at it|one more thing|additionally|could you also|@agent\s+(try|redo|again|fix|correct)|next steps?\s*$|please proceed\s*$|not\s+(quite|exactly|what I)|still\s+(not|wrong|broken|failing))/i;
 
 /** Category keyword classifiers (tested against the user's correction message). */
 const CATEGORY_CLASSIFIERS: Array<{ re: RegExp; category: CorrectionCategory }> = [
@@ -136,15 +136,19 @@ export class CorrectionsAnalyzer extends AnalyzerBase {
 
     while (i < reqs.length - 1) {
       // Look for correction start: user message after an assistant response
-      if (reqs[i].responseText && i + 1 < reqs.length && reqs[i + 1].messageText) {
-        const userMsg = reqs[i + 1].messageText;
-        if (CORRECTION_RE.test(userMsg)) {
-          const correction = this.traceCorrectionLoop(reqs, i + 1, session.sessionId);
-          if (correction) {
-            corrections.push(correction);
-            i = correction.requestIndex + correction.correctionCount + 1;
-            continue;
-          }
+      const nextMsg = reqs[i + 1]?.messageText;
+      const hasAnyResponse = !!reqs[i].responseText;
+      const isStrongCorrection = nextMsg && (
+        /^@agent\s+(try|redo|again)/i.test(nextMsg) ||
+        /^(try again|redo|please fix)/i.test(nextMsg)
+      );
+
+      if (nextMsg && (hasAnyResponse || isStrongCorrection) && CORRECTION_RE.test(nextMsg)) {
+        const correction = this.traceCorrectionLoop(reqs, i + 1, session.sessionId);
+        if (correction) {
+          corrections.push(correction);
+          i = correction.requestIndex + correction.correctionCount + 1;
+          continue;
         }
       }
       i++;

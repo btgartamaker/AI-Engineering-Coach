@@ -87,10 +87,11 @@ export async function renderCorrections(container: HTMLElement, currentFilter: D
       </div>
     </div>
 
+    ${data.totalCorrectionTurns > 0 ? html`
     <div class="two-col" style="margin-bottom:16px;">
       <${CanvasEl} id="corrCategoryChart" height=${180} title="Corrections by Category" />
       <${CanvasEl} id="corrTrendChart" height=${180} title="Correction Rate Over Time" />
-    </div>
+    </div>` : ''}
 
     <div class="corr-section">
       <h2 class="corr-section-title">Top Correction Triggers</h2>
@@ -137,9 +138,11 @@ export async function renderCorrections(container: HTMLElement, currentFilter: D
     </div>
   `, container);
 
-  // Render charts
-  renderCategoryChart(data);
-  renderTrendChart(data);
+  // Render charts (only if there's data)
+  if (data.totalCorrectionTurns > 0) {
+    renderCategoryChart(data);
+    renderTrendChart(data);
+  }
 }
 
 /* ── Charts ──────────────────────────────────────────────────────────── */
