@@ -84,4 +84,29 @@ export class AnalyzerBase {
     }
     return keys;
   }
+
+  /**
+   * Normalize a workspace name for display.
+   * - Full paths like `/Users/name/projects/my-app` become `my-app`
+   * - .code-workspace extensions are stripped
+   * - Home dir prefix (`~`) is resolved to the last path segment
+   * - Short names (no slashes) are kept as-is
+   */
+  public static displayWorkspaceName(raw: string): string {
+    if (!raw) return raw;
+
+    // Strip .code-workspace extension
+    let name = raw.replace(/\.code-workspace$/i, '');
+
+    // If it looks like a filesystem path, take the last segment
+    if (name.includes('/') || name.includes('\\')) {
+      // Normalize path separators
+      const normalized = name.replace(/\\/g, '/');
+      const segments = normalized.replace(/\/$/, '').split('/');
+      const last = segments[segments.length - 1];
+      if (last && last.length > 0) return last;
+    }
+
+    return name;
+  }
 }

@@ -102,7 +102,7 @@ export class DashboardAnalyzer extends AnalyzerBase {
     for (const s of this.sessions) {
       const key = s.workspaceName;
       if (!workspaces.has(key)) {
-        workspaces.set(key, { id: key, name: s.workspaceName });
+        workspaces.set(key, { id: key, name: AnalyzerBase.displayWorkspaceName(s.workspaceName) });
         wsHarnesses.set(key, new Set());
       }
       wsHarnesses.get(key)!.add(s.harness);
