@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.16 — Timeline Lane Deduplication
+
+- **Timeline lanes now group by normalized workspace name**: sessions with path variants of the same workspace (e.g. `/Users/user/project` vs `project`) are merged into a single lane, eliminating duplicate lane headers
+
 ## 0.2.15 — Remove Skill Finder, Workspace Display Normalization
 
 - **Removed Skill Finder**: the "Skill Finder" sidebar entry and routing were removed (the page showed AI-triage results for installing skills, which is infrastructure-focused and not actionable for human-in-the-loop coaching)
