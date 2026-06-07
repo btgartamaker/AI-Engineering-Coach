@@ -741,8 +741,8 @@ export function decodePiWorkspaceName(encoded: string, workspaceDir?: string): s
         const firstLine = fs.readFileSync(firstFile, 'utf-8').split('\n')[0];
         const header = JSON.parse(firstLine);
         if (header.type === 'session' && typeof header.cwd === 'string' && header.cwd) {
-          // Use the full cwd as the workspace display name
-          return header.cwd;
+          // Use the basename of cwd as the workspace display name
+          return path.basename(header.cwd.replace(/\/+$/, ''));
         }
       }
     } catch {

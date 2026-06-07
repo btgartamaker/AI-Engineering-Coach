@@ -403,7 +403,7 @@ async function showSessionDetail(sessionId: string): Promise<void> {
   render(html`<div class="session-detail-inner">
     <div class="session-detail-header">
       <h2>${session.workspaceName}</h2>
-      <span class="muted">${formatDate(session.creationDate)} \u00b7 ${session.requestCount} messages \u00b7 ${session.location}</span>
+      <span class="muted">${formatDate(session.creationDate)} \u00b7 ${session.requestCount} messages</span>
     </div>
     <div class="message-thread">
       ${session.requests.map(r => {
