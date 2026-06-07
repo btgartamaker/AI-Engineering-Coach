@@ -1,10 +1,12 @@
 # Changelog
 
-## 0.2.16 — Timeline Lane Deduplication
+## 0.2.16 — Timeline Lane Deduplication, Fix Skill Finder Removal
 
 - **Timeline lanes now group by normalized workspace name**: sessions with path variants of the same workspace (e.g. `/Users/user/project` vs `project`) are merged into a single lane, eliminating duplicate lane headers
+- **Restored Skill Finder sidebar entry**: only `data-page="tool-proficiency"` (labeled "Skills") was intended for removal; Skill Finder is back
+- **Fixed duplicate `bugs` key in `package.json`**: eliminated 5 build warnings
 
-## 0.2.15 — Remove Skill Finder, Workspace Display Normalization
+## 0.2.15 — Workspace Display Normalization
 
 - **Removed Skill Finder**: the "Skill Finder" sidebar entry and routing were removed (the page showed AI-triage results for installing skills, which is infrastructure-focused and not actionable for human-in-the-loop coaching)
 - **Workspace name display normalization**: added `displayWsName()` helper to `shared.ts` that strips file paths down to the last path segment for display

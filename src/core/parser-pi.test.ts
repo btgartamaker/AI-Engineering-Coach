@@ -80,7 +80,7 @@ describe('decodePiWorkspaceName', () => {
     try {
       fs.writeFileSync(path.join(tmpDir, 'test.jsonl'), SAMPLE_SESSION_JSONL);
       const result = decodePiWorkspaceName('--Users-testuser-project--', tmpDir);
-      expect(result).toBe('/Users/testuser/project');
+      expect(result).toBe('project');
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -273,7 +273,7 @@ describe('parsePiSessions', () => {
 
     const results = parsePiSessions(tmpDir);
     expect(results).toHaveLength(1);
-    expect(results[0].workspaceName).toBe('/Users/testuser/project');
+    expect(results[0].workspaceName).toBe('project');
     expect(results[0].workspaceId).toBe('pi---Users-testuser-project--');
     expect(results[0].sessions).toHaveLength(2);
   });
