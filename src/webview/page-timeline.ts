@@ -304,6 +304,18 @@ async function renderDayDetail(
 
 function renderLanes(tl: TlData, lanes: HTMLElement, detailEl: HTMLElement): void {
   lanes.textContent = ''; // Clear previous lanes on re-render
+
+  // Normalize workspace names so path variants of the same project
+  // (e.g. "/Users/user/project" vs "project") are grouped together.
+  for (const s of tl.sessions) s.workspaceName = displayWsName(s.workspaceName);
+
+  // Group sessions by normalized workspace name — one lane per workspace
+  const wsGroups = new Map<string, TlSession[]>();
+  for (const s of tl.sessions) {
+    const g = wsGroups.get(s.workspaceName);
+    if (g) g.push(s); else wsGroups.set(s.workspaceName, [s]);
+  }
+
   let rangeStart = 0, rangeEnd = 24;
   if (tl.sessions.length > 0) {
     const firstTs = Math.min(...tl.sessions.map(s => s.firstActivity));
@@ -319,58 +331,61 @@ function renderLanes(tl: TlData, lanes: HTMLElement, detailEl: HTMLElement): voi
 
   const wsColorMap = new Map<string, number>();
   let colorIdx = 0;
-  for (const s of tl.sessions) {
-    if (!wsColorMap.has(s.workspaceName)) {
-      wsColorMap.set(s.workspaceName, colorIdx % LANE_COLORS.length);
-      colorIdx++;
-    }
+  for (const [wsName] of wsGroups) {
+    wsColorMap.set(wsName, colorIdx % LANE_COLORS.length);
+    colorIdx++;
   }
 
-  for (const s of tl.sessions) {
-    const ci = wsColorMap.get(s.workspaceName) || 0;
+  for (const [wsName, sessions] of wsGroups) {
+    const ci = wsColorMap.get(wsName) || 0;
     const color = LANE_COLORS[ci];
+    const totalReq = sessions.reduce((sum, s) => sum + s.requestCount, 0);
 
     const lane = el('div', 'timeline-lane');
 
     const label = el('div', 'timeline-lane-label');
-    render(html`<span class="lane-ws">${displayWsName(s.workspaceName)}</span><span class="lane-meta">${s.requestCount} req</span>`, label);
+    render(html`<span class="lane-ws">${wsName}</span><span class="lane-meta">${totalReq} req</span>`, label);
     lane.appendChild(label);
 
     const track = el('div', 'timeline-lane-track');
+    const lastSession = sessions[sessions.length - 1];
 
-    const leftPct = Math.max(0, ((s.firstActivity - rangeStartMs) / rangeDuration * 100));
-    const rightPct = Math.min(100, ((s.lastActivity - rangeStartMs) / rangeDuration * 100));
-    const widthPct = Math.max(0.5, rightPct - leftPct);
-    const bar = el('div', 'timeline-bar');
-    bar.style.left = leftPct.toFixed(2) + '%';
-    bar.style.width = widthPct.toFixed(2) + '%';
-    bar.style.background = color.bg;
-    bar.style.border = `1px solid ${color.border}`;
-    bar.title = `${displayWsName(s.workspaceName)}: ${s.requestCount} requests\n${formatTime(s.firstActivity)} - ${formatTime(s.lastActivity)}`;
-    track.appendChild(bar);
+    for (const s of sessions) {
+      const leftPct = Math.max(0, ((s.firstActivity - rangeStartMs) / rangeDuration * 100));
+      const rightPct = Math.min(100, ((s.lastActivity - rangeStartMs) / rangeDuration * 100));
+      const widthPct = Math.max(0.5, rightPct - leftPct);
+      const bar = el('div', 'timeline-bar');
+      bar.style.left = leftPct.toFixed(2) + '%';
+      bar.style.width = widthPct.toFixed(2) + '%';
+      bar.style.background = color.bg;
+      bar.style.border = `1px solid ${color.border}`;
+      bar.title = `${wsName}: ${s.requestCount} requests\n${formatTime(s.firstActivity)} - ${formatTime(s.lastActivity)}`;
+      track.appendChild(bar);
 
-    for (const r of s.requests) {
-      const dot = el('div', 'timeline-dot');
-      const dotPct = ((r.timestamp - rangeStartMs) / rangeDuration * 100);
-      dot.style.left = dotPct.toFixed(2) + '%';
-      dot.style.background = color.dot;
-      dot.title = `${formatTime(r.timestamp)}: ${r.preview}`;
-      track.appendChild(dot);
+      for (const r of s.requests) {
+        const dot = el('div', 'timeline-dot');
+        const dotPct = ((r.timestamp - rangeStartMs) / rangeDuration * 100);
+        dot.style.left = dotPct.toFixed(2) + '%';
+        dot.style.background = color.dot;
+        dot.title = `${formatTime(r.timestamp)}: ${r.preview}`;
+        track.appendChild(dot);
+      }
     }
 
     lane.appendChild(track);
 
+    // Click shows the most recent session in this workspace
     lane.addEventListener('click', () => {
       for (const l of document.querySelectorAll('.timeline-lane')) (l as HTMLElement).style.removeProperty('border-color');
       lane.style.borderColor = color.border;
 
       render(html`<div class="timeline-detail">
-        <h3>${displayWsName(s.workspaceName)} \u2014 ${s.sessionName}</h3>
+        <h3>${wsName} \u2014 ${lastSession.sessionName}</h3>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
-          ${formatTime(s.firstActivity)} - ${formatTime(s.lastActivity)} | ${s.requestCount} requests
+          ${formatTime(lastSession.firstActivity)} - ${formatTime(lastSession.lastActivity)} | ${lastSession.requestCount} requests
         </div>
         <div class="timeline-detail-requests">
-          ${s.requests.map(r => html`<div class="timeline-detail-req">
+          ${lastSession.requests.map(r => html`<div class="timeline-detail-req">
             <span class="timeline-detail-time">${formatTime(r.timestamp)}</span>
             <span class="timeline-detail-msg">${r.preview}</span>
           </div>`)}
