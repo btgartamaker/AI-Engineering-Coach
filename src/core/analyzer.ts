@@ -13,7 +13,7 @@ import {
   AntiPatternData, WorkLifeBalanceResult, StatsResult, HarnessComparisonData,
   WorkflowOptimizationData, ConfigHealthData, FlowStateData, Workspace,
   CalendarActivityData, ProjectOverviewData, ContextManagementData, InsightsData,
-  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData, PlaybookData,
+  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData, PlaybookData, ToolProficiencyData,
 } from './types';
 import { DashboardAnalyzer } from './analyzer-dashboard';
 import { ProductionAnalyzer } from './analyzer-production';
@@ -27,6 +27,7 @@ import { ContextAnalyzer } from './analyzer-context';
 import { InsightsAnalyzer } from './analyzer-insights';
 import { CorrectionsAnalyzer } from './analyzer-corrections';
 import { PlaybookAnalyzer } from './analyzer-playbook';
+import { ToolAnalyzer } from './analyzer-tools';
 import { ImageAnalyzer, ImageGalleryData } from './analyzer-images';
 import { AnalyzerBase } from './analyzer-base';
 import { errorCore, infoCore, warnCore } from './log';
@@ -44,6 +45,7 @@ export class Analyzer {
   private readonly context: ContextAnalyzer;
   private readonly corrections: CorrectionsAnalyzer;
   private readonly playbook: PlaybookAnalyzer;
+  private readonly tools: ToolAnalyzer;
   private readonly images: ImageAnalyzer;
   private readonly sessions: Session[];
   private readonly editLocIndex: Map<string, Map<string, number>>;
@@ -68,6 +70,7 @@ export class Analyzer {
     this.context = new ContextAnalyzer(sessions, elIdx, sharedMap);
     this.corrections = new CorrectionsAnalyzer(sessions, elIdx, sharedMap);
     this.playbook = new PlaybookAnalyzer(sessions, elIdx, sharedMap);
+    this.tools = new ToolAnalyzer(sessions, elIdx, sharedMap);
     this.images = new ImageAnalyzer(sessions, elIdx, sharedMap);
   }
 
@@ -259,6 +262,10 @@ export class Analyzer {
 
   getPlaybook(filter?: DateFilter): PlaybookData {
     return this.playbook.getPlaybook(filter);
+  }
+
+  getToolProficiency(filter?: DateFilter): ToolProficiencyData {
+    return this.tools.getToolProficiency(filter);
   }
 
   getImageGallery(f?: DateFilter): ImageGalleryData { return this.images.getImageGallery(f); }

@@ -46,7 +46,7 @@ import type {
   TokenCoverageData,
   WorkspaceBreakdown,
   WorkLifeBalanceResult,
-  WorkflowOptimizationData, CorrectionAnalysisData,
+  WorkflowOptimizationData, CorrectionAnalysisData, ToolProficiencyData,
 } from './analytics-types';
 import type { ConfigHealthData } from './config-types';
 import type { InsightsData, PlaybookData } from './insights-types';
@@ -88,6 +88,7 @@ export interface RpcMethodMap {
   getProjectOverview: { params: DateFilter | undefined; result: ProjectOverviewData };
   getCorrections: { params: DateFilter | undefined; result: CorrectionAnalysisData };
   getPlaybook: { params: DateFilter | undefined; result: PlaybookData };
+  getToolProficiency: { params: DateFilter | undefined; result: ToolProficiencyData };
   getImageGallery: { params: DateFilter | undefined; result: ImageGalleryData };
   getSessionImages: { params: { sessionId: string; requestId: string }; result: { images: string[] } };
   getRuleEditor: { params: DateFilter | Record<string, unknown>; result: unknown };

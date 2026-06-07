@@ -588,6 +588,42 @@ export interface AntiPatternData {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   Tool Proficiency Score (Spec 14)
+   ═══════════════════════════════════════════════════════════════════ */
+
+export interface ToolStat {
+  toolName: string;
+  callCount: number;
+  uniqueSessions: number;
+  successRate: number;
+  avgTokensPerCall: number;
+}
+
+export interface ToolGroupScore {
+  groupName: string;
+  tools: string[];
+  usageRate: number;
+  benchmarkRate: number;
+  gap: number;
+  importance: 'critical' | 'recommended' | 'optional';
+}
+
+export interface ToolProficiencyData {
+  overallScore: number;
+  toolsUsed: ToolStat[];
+  groups: ToolGroupScore[];
+  blindSpots: {
+    toolName: string;
+    harness: string;
+    applicableWorkTypes: string[];
+    exampleUsage: string;
+    expectedBenefit: string;
+  }[];
+  weeklyTrend: { labels: string[]; score: number[] };
+  topSuggestions: string[];
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    Correction Turn & Error Analysis (Spec 11)
    ═══════════════════════════════════════════════════════════════════ */
 
