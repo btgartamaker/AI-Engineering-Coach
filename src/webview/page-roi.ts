@@ -7,7 +7,7 @@
 
 import type { DateFilter, ROIData } from '../core/types';
 import { rpc, createChart, destroyCharts, COLORS, withErrorBoundary, formatNum } from './shared';
-import { html, render } from './render';
+import { html, render, CanvasEl } from './render';
 
 export function renderROI(container: HTMLElement, filter: DateFilter): void {
   withErrorBoundary('ROI', container, () => renderAsync(container, filter));
@@ -56,7 +56,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
       <!-- Weekly trend -->
       <div class="card" style="padding:16px;margin-bottom:20px;">
         <h3 style="margin:0 0 12px 0;font-size:14px;">Weekly Cost &amp; Time Saved</h3>
-        <canvas id="roiTrendChart" width="600" height="200" style="width:100%;height:200px;"></canvas>
+        <${CanvasEl} id="roiTrendChart" height=${200} title="Weekly Cost &amp; Time Saved" />
         ${data.weeklyCost.labels.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough weekly data yet.</p>` : ''}
       </div>
 

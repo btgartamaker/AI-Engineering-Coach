@@ -7,7 +7,7 @@
 
 import type { DateFilter, ToolProficiencyData } from '../core/types';
 import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary, formatNum } from './shared';
-import { html, render } from './render';
+import { html, render, CanvasEl } from './render';
 
 const GROUP_LABELS: Record<string, string> = {
   'file-write': 'File Writing',
@@ -74,7 +74,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
         <p style="color:var(--text-muted);font-size:12px;margin:0 0 12px 0;">
           Bars show your usage rate (calls per session) vs. the benchmark for your harness.
         </p>
-        <canvas id="toolGroupChart" width="600" height="220" style="width:100%;height:220px;"></canvas>
+        <${CanvasEl} id="toolGroupChart" height=${220} title="Tool Usage by Group" />
       </div>
 
       <!-- Blind spots -->
@@ -135,7 +135,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
       <!-- Weekly Trend -->
       <div class="card" style="padding:16px;">
         <h3 style="margin:0 0 12px 0;font-size:14px;">Proficiency Trend</h3>
-        <canvas id="toolTrendChart" width="600" height="160" style="width:100%;height:160px;"></canvas>
+        <${CanvasEl} id="toolTrendChart" height=${160} title="Proficiency Trend" />
         ${data.weeklyTrend.labels.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough data for a trend yet.</p>` : ''}
       </div>
 

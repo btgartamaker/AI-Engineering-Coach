@@ -7,7 +7,7 @@
 
 import type { DateFilter, PlaybookData, PromptExample, PromptPattern } from '../core/types';
 import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary } from './shared';
-import { html, render } from './render';
+import { html, render, CanvasEl } from './render';
 
 const DIMMED_COLORS: Record<string, string> = {
   constraints: '#58a6ff',
@@ -58,8 +58,8 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
           ${ringHtml(gradeScore(data.overallGrade), scoreColor(gradeScore(data.overallGrade)), 100)}
           <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Overall Grade</div>
         </div>
-        <div class="card" style="flex:1;padding:16px;display:flex;align-items:center;justify-content:center;">
-          <canvas id="playbookRadarChart" width="300" height="200" style="max-height:200px;"></canvas>
+        <div class="card" style="flex:1;padding:16px;">
+          <${CanvasEl} id="playbookRadarChart" height=${200} title="Prompt Dimensions" />
         </div>
       </div>
 
@@ -80,7 +80,7 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
       <!-- Trend -->
       <div class="card" style="padding:16px;margin-bottom:20px;">
         <h3 style="margin:0 0 12px 0;font-size:14px;">Prompt Maturity Trend</h3>
-        <canvas id="playbookTrendChart" width="600" height="160" style="width:100%;height:160px;"></canvas>
+        <${CanvasEl} id="playbookTrendChart" height=${160} title="Prompt Maturity Trend" />
         ${data.weeklyTrend.labels.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough data for a trend yet. Keep coding!</p>` : ''}
       </div>
 

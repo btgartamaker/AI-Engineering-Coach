@@ -7,7 +7,7 @@
 
 import type { DateFilter, PracticePlanData, SkillArea } from '../core/types';
 import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary } from './shared';
-import { html, render } from './render';
+import { html, render, CanvasEl } from './render';
 
 const SKILL_LABELS: Record<SkillArea, string> = {
   'prompt-specificity': 'Prompt Specificity',
@@ -88,7 +88,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
           <p style="color:var(--text-muted);font-size:12px;margin:0 0 8px 0;">
             Your proficiency across 7 skill areas. Red = needs work, Green = strong.
           </p>
-          <canvas id="practiceRadarChart" width="300" height="260" style="width:100%;height:260px;"></canvas>
+          <${CanvasEl} id="practiceRadarChart" height=${260} title="Skill Profile" />
         </div>
         <div class="card" style="flex:0 0 240px;padding:16px;">
           <h3 style="margin:0 0 12px 0;font-size:14px;">Levels</h3>
