@@ -107,6 +107,31 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
         ` : ''}
       </div>
 
+      <!-- Methodology disclosure -->
+      <details class="card" style="padding:16px;margin-bottom:20px;">
+        <summary style="cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);user-select:none;">
+          How this is calculated
+        </summary>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+          <p style="margin:0 0 8px 0;">
+            <strong>Cost estimates</strong> use published API pricing per model (input + output tokens).
+            Unknown models default to GPT-4.1 rates ($2/M input, $8/M output).
+            Actual costs vary based on caching, enterprise discounts, and tier.
+            Review your provider's billing for precise figures.
+          </p>
+          <p style="margin:0 0 8px 0;">
+            <strong>Time saved</strong> is estimated from research-backed heuristics:
+            0.1 min per AI-generated LoC, 0.5 min per file read via AI, 2 min per search.
+            Correction turns are valued at 50% of initial generation time.
+            Actual time saved depends on task complexity.
+          </p>
+          <p style="margin:0;">
+            <strong>Model matching</strong> uses partial name matching.
+            Models unknown to the rate table fall back to GPT-4.1 pricing.
+          </p>
+        </div>
+      </details>
+
     </div>
   `, container);
 
