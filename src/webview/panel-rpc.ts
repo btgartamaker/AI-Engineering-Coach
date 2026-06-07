@@ -9,7 +9,7 @@ import { Analyzer } from '../core/analyzer';
 import { ParseResult } from '../core/parser';
 import { loadSessionFromDisk } from '../core/cache';
 import { extractSessionImages } from '../core/parser-vscode-files';
-import { DateFilter, RpcMethodName, BurndownConfig } from '../core/types';
+import { DateFilter, RpcMethodName, BurndownConfig, AntiPatternData } from '../core/types';
 import type { RpcMethodMap, RpcResult } from '../core/types/rpc-types';
 import {
   getAllRules,
@@ -746,6 +746,10 @@ const rpcHandlers: TypedRpcHandlers = {
   getPlaybook: (a, _p, params) => a.getPlaybook(validateDateFilter(params)),
   getToolProficiency: (a, _p, params) => a.getToolProficiency(validateDateFilter(params)),
   getROI: (a, _p, params) => a.getROI(validateDateFilter(params)),
+  getPracticePlan: (a, _p, params) => a.getPracticePlan(
+    params?.filter ? validateDateFilter(params.filter as Record<string, unknown>) : undefined,
+    params?.antiPatternData as AntiPatternData | undefined,
+  ),
   getImageGallery: (a, _p, params) => a.getImageGallery(validateDateFilter(params)),
   getSessionImages: (_a, p, params) => {
     const sessionId = isString(params?.sessionId) ? params.sessionId : '';

@@ -13,7 +13,7 @@ import {
   AntiPatternData, WorkLifeBalanceResult, StatsResult, HarnessComparisonData,
   WorkflowOptimizationData, ConfigHealthData, FlowStateData, Workspace,
   CalendarActivityData, ProjectOverviewData, ContextManagementData, InsightsData,
-  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData, PlaybookData, ToolProficiencyData, ROIData,
+  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData, PlaybookData, ToolProficiencyData, ROIData, PracticePlanData,
 } from './types';
 import { DashboardAnalyzer } from './analyzer-dashboard';
 import { ProductionAnalyzer } from './analyzer-production';
@@ -29,6 +29,7 @@ import { CorrectionsAnalyzer } from './analyzer-corrections';
 import { PlaybookAnalyzer } from './analyzer-playbook';
 import { ToolAnalyzer } from './analyzer-tools';
 import { ROIAnalyzer } from './analyzer-roi';
+import { PracticeAnalyzer } from './analyzer-practice';
 import { ImageAnalyzer, ImageGalleryData } from './analyzer-images';
 import { AnalyzerBase } from './analyzer-base';
 import { errorCore, infoCore, warnCore } from './log';
@@ -48,6 +49,7 @@ export class Analyzer {
   private readonly playbook: PlaybookAnalyzer;
   private readonly tools: ToolAnalyzer;
   private readonly roi: ROIAnalyzer;
+  private readonly practice: PracticeAnalyzer;
   private readonly images: ImageAnalyzer;
   private readonly sessions: Session[];
   private readonly editLocIndex: Map<string, Map<string, number>>;
@@ -74,6 +76,7 @@ export class Analyzer {
     this.playbook = new PlaybookAnalyzer(sessions, elIdx, sharedMap);
     this.tools = new ToolAnalyzer(sessions, elIdx, sharedMap);
     this.roi = new ROIAnalyzer(sessions, elIdx, sharedMap);
+    this.practice = new PracticeAnalyzer(sessions, elIdx, sharedMap);
     this.images = new ImageAnalyzer(sessions, elIdx, sharedMap);
   }
 
@@ -273,6 +276,10 @@ export class Analyzer {
 
   getROI(filter?: DateFilter): ROIData {
     return this.roi.getROI(filter);
+  }
+
+  getPracticePlan(filter?: DateFilter, antiPatternData?: AntiPatternData): PracticePlanData {
+    return this.practice.getPracticePlan(filter, antiPatternData);
   }
 
   getImageGallery(f?: DateFilter): ImageGalleryData { return this.images.getImageGallery(f); }

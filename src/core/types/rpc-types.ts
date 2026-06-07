@@ -49,7 +49,7 @@ import type {
   WorkflowOptimizationData, CorrectionAnalysisData, ToolProficiencyData, ROIData,
 } from './analytics-types';
 import type { ConfigHealthData } from './config-types';
-import type { InsightsData, PlaybookData } from './insights-types';
+import type { InsightsData, PlaybookData, PracticePlanData } from './insights-types';
 import type { ContextManagementData, FlowStateData, WorkspaceContextSessionsData } from './context-types';
 import type { ImageGalleryData } from '../analyzer-images';
 
@@ -90,6 +90,7 @@ export interface RpcMethodMap {
   getPlaybook: { params: DateFilter | undefined; result: PlaybookData };
   getToolProficiency: { params: DateFilter | undefined; result: ToolProficiencyData };
   getROI: { params: DateFilter | undefined; result: ROIData };
+  getPracticePlan: { params: { filter?: DateFilter; antiPatternData?: AntiPatternData } | undefined; result: PracticePlanData };
   getImageGallery: { params: DateFilter | undefined; result: ImageGalleryData };
   getSessionImages: { params: { sessionId: string; requestId: string }; result: { images: string[] } };
   getRuleEditor: { params: DateFilter | Record<string, unknown>; result: unknown };

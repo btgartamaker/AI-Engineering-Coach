@@ -83,6 +83,52 @@ export interface PromptMaturityData {
   samplePrompts: { text: string; grade: string; issues: string[] }[];
 }
 
+/* ---- Deliberate Practice Plan (Spec 16) ---- */
+
+export type SkillArea =
+  | 'prompt-specificity'
+  | 'constraint-writing'
+  | 'context-provision'
+  | 'tool-selection'
+  | 'session-hygiene'
+  | 'error-recovery'
+  | 'task-decomposition';
+
+export interface SkillProficiency {
+  area: SkillArea;
+  score: number;
+  benchmark: number;
+  isWeakness: boolean;
+  exercisesCompleted: number;
+  improvement: number;
+}
+
+export interface PracticeExercise {
+  id: string;
+  skillArea: SkillArea;
+  title: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  description: string;
+  exercisePrompt: string;
+  successCriteria: string[];
+  estimatedMinutes: number;
+}
+
+export interface PracticePlanData {
+  skills: SkillProficiency[];
+  recommendedExercises: PracticeExercise[];
+  completedExercises: {
+    exerciseId: string;
+    completedAt: string;
+    score: number;
+    scoreDelta?: number;
+  }[];
+  levels: Record<SkillArea, 'unaware' | 'aware' | 'practicing' | 'proficient' | 'mentoring'>;
+  currentStreak: number;
+  longestStreak: number;
+  lastPracticeDate: string | null;
+}
+
 /* ---- Prompt Engineering Playbook (Spec 12) ---- */
 export interface PromptExample {
   originalText: string;
