@@ -190,34 +190,56 @@ interface ImprovementResult {
   note: string;
 }
 
+/** Check if a message is a question (who/what/why/where/when/how/does/is/are) */
+function isQuestion(msg: string): boolean {
+  return /^(who|what|why|where|when|how|does|do|is|are|can|could|would|should|will)/i.test(msg.trim());
+}
+
+/** Detect if a message looks like a correction/retry command */
+function isCorrectionCmd(msg: string): boolean {
+  return /^@agent\s+(try|redo|again)/i.test(msg.trim()) ||
+    /^(try again|redo|please fix|retry)/i.test(msg.trim());
+}
+
 function improvePrompt(msg: string, issues: string[], hasFileRefs: boolean): ImprovementResult {
-  let improved = msg;
+  const trimmed = msg.trim();
+
+  // Don't try to improve questions or correction commands — they're not work prompts
+  if (isQuestion(trimmed) || isCorrectionCmd(trimmed)) {
+    return {
+      improved: trimmed,
+      note: 'This message is a question or command — no improvement needed',
+    };
+  }
+
+  let improved = trimmed;
   const notes: string[] = [];
 
   if (issues.includes('No constraints specified')) {
-    improved = `${improved.trimEnd()}\n\nConstraints:\n- Must use existing code patterns\n- Must handle edge cases (null, empty, error)\n- Follow project conventions`;
+    improved = `${improved}\n\nConstraints:\n- Must use existing code patterns\n- Must handle edge cases (null, empty, error)\n- Follow project conventions`;
     notes.push('Added explicit constraints');
   }
   if (issues.includes('No success criteria')) {
-    improved = `${improved.trimEnd()}\n\nSuccess criteria:\n- Code compiles without errors\n- Passes existing tests\n- Handles all specified edge cases`;
+    improved = `${improved}\n\nSuccess criteria:\n- Code compiles without errors\n- Passes existing tests\n- Handles all specified edge cases`;
     notes.push('Added success criteria');
   }
   if (issues.includes('No verification steps')) {
-    improved = `${improved.trimEnd()}\n\nVerification:\n- Include unit tests for critical paths\n- Verify with a manual check`;
+    improved = `${improved}\n\nVerification:\n- Include unit tests for critical paths\n- Verify with a manual check`;
     notes.push('Added verification steps');
   }
   if (issues.includes('No context provided')) {
-    improved = `Given the project context: [describe what you need]\nTask: ${improved}`;
+    improved = `Context: [describe the feature, bug, or file you\'re working on]\n\n${improved}`;
     notes.push('Added context framing');
   }
   if (issues.includes('Very short/vague prompt')) {
-    improved = `I need to ${msg.trimEnd().toLowerCase()}. Please provide a complete, well-structured solution with proper error handling and edge case coverage.`;
-    notes.push('Elaborated vague prompt');
+    // Provide a scaffold that actually helps rather than wrapping in "I need to"
+    improved = `Task: ${improved}\n\nRequirements:\n- [list specific requirements here]\n\nAcceptance criteria:\n- [define what success looks like]`;
+    notes.push('Elaborated vague prompt with task structure');
   }
 
-  // Add file references prefix if missing
-  if (!hasFileRefs && msg.length < 200) {
-    improved = `[Reference relevant files here]\n\n${improved}`;
+  // Add file references prefix if missing (and message is short enough)
+  if (!hasFileRefs && improved.length < 300) {
+    improved = `Files: [reference relevant files here]\n\n${improved}`;
     notes.push('Add file references for better precision');
   }
 

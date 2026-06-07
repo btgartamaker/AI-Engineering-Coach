@@ -46,7 +46,7 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
       <p style="color:var(--text-muted);margin:8px 0 0 0;font-size:13px;">
         Personalized prompt patterns and improvements based on your data.
         Your overall grade: <strong style="color:${scoreColor(gradeScore(data.overallGrade))}">${data.overallGrade}</strong>
-        &middot; Weakest area: <strong>${data.weakestDimension}</strong>
+        · Weakest area: <strong>${data.weakestDimension}</strong>
       </p>
     </div>
 
