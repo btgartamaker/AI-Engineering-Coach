@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.13 — Corrections Page UI Polish
+
+- **Visual hierarchy**: stat cards now have colored left-border accents (green/yellow/red based on correction-rate severity) and improved typography
+- **Zero-token filtering**: correction cards with 0 wasted tokens are hidden from the Recent Corrections list
+- **Smooth expand/collapse**: `details` cards animate open/close via CSS grid transition
+- **Truncated prompts**: long original prompts, first responses, and correction messages show a "Show more" toggle instead of a hard character slice
+- **Trigger snippets**: each correction summary now displays the first correction message snippet (e.g. `"Output Quality — \"try again...\""`) to add variety beyond the category badge
+- **Responsive layout**: stat cards stack vertically on narrow viewports; correction summaries reflow gracefully
+- **Syntax-highlighted blocks**: code/pre blocks inside correction cards use editor-themed styling with borders and padding
+
 ## 0.2.0 — Pi, Gemini & Harness-Agnostic Analytics
 
 - **Pi harness integration**: full session parser for `~/.pi/agent/sessions/` — tree-structured JSONL with tool call classification, token tracking, and multi-workspace support

@@ -33,8 +33,33 @@ const CATEGORY_COLORS: Record<CorrectionCategory, string> = {
   'unknown': '#8b949e',
 };
 
+const TRUNCATE_LEN = 300;
+
 /** Redact sensitive data in prompts (default: on) */
 let redactEnabled = true;
+
+function renderTruncatedPre(text: string, maxLen = TRUNCATE_LEN) {
+  if (text.length <= maxLen) {
+    return html`<pre class="corr-pre">${text}</pre>`;
+  }
+  return html`
+    <div class="corr-truncated" data-expanded="false">
+      <pre class="corr-pre short">${text.slice(0, maxLen)}...</pre>
+      <pre class="corr-pre full" style="display:none">${text}</pre>
+      <button class="corr-show-more" onclick=${(e: Event) => {
+        const wrap = (e.currentTarget as HTMLElement).closest('.corr-truncated') as HTMLElement;
+        if (wrap) wrap.dataset.expanded = 'true';
+      }}>Show more</button>
+    </div>`;
+}
+
+function getTriggerSnippet(correctionRequests: string[]): string | null {
+  const first = correctionRequests[0];
+  if (!first) return null;
+  const clean = first.trim().replaceAll(/\s+/g, ' ');
+  if (clean.length < 4) return null;
+  return clean.length > 45 ? clean.slice(0, 45) + '...' : clean;
+}
 
 export async function renderCorrections(container: HTMLElement, currentFilter: DateFilter): Promise<void> {
   destroyCharts();
@@ -53,6 +78,10 @@ export async function renderCorrections(container: HTMLElement, currentFilter: D
     ? Math.round(data.totalCorrectionTurns / data.correctionRate)
     : 0;
 
+  const rateColor = data.correctionRate > 0.15 ? COLORS.red : data.correctionRate > 0.08 ? COLORS.yellow : COLORS.green;
+
+  const filteredCorrections = data.recentCorrections.filter(c => c.wastedTokens > 0);
+
   render(html`
     <div class="corr-header">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -70,18 +99,18 @@ export async function renderCorrections(container: HTMLElement, currentFilter: D
     </div>
 
     <div class="corr-summary-grid">
-      <div class="corr-stat-card">
-        <div class="corr-stat-val" style="color:${data.correctionRate > 0.15 ? COLORS.red : data.correctionRate > 0.08 ? COLORS.yellow : COLORS.green}">${(data.correctionRate * 100).toFixed(1)}%</div>
+      <div class="corr-stat-card" style="--accent:${rateColor}">
+        <div class="corr-stat-val" style="color:${rateColor}">${(data.correctionRate * 100).toFixed(1)}%</div>
         <div class="corr-stat-lbl">Correction Rate</div>
         <div class="corr-stat-sub">${data.totalCorrectionTurns} corrections in ${totalReqs} total turns</div>
       </div>
-      <div class="corr-stat-card">
-        <div class="corr-stat-val">${formatNum(data.wastedTokens)}</div>
+      <div class="corr-stat-card" style="--accent:${COLORS.blue}">
+        <div class="corr-stat-val" style="color:${COLORS.blue}">${formatNum(data.wastedTokens)}</div>
         <div class="corr-stat-lbl">Tokens Wasted</div>
         <div class="corr-stat-sub">on corrected output</div>
       </div>
-      <div class="corr-stat-card">
-        <div class="corr-stat-val">$${data.wastedCost.toFixed(2)}</div>
+      <div class="corr-stat-card" style="--accent:${COLORS.green}">
+        <div class="corr-stat-val" style="color:${COLORS.green}">$${data.wastedCost.toFixed(2)}</div>
         <div class="corr-stat-lbl">Estimated Cost</div>
         <div class="corr-stat-sub">at blended ~$3/M tokens</div>
       </div>
@@ -108,32 +137,37 @@ export async function renderCorrections(container: HTMLElement, currentFilter: D
 
     <div class="corr-section">
       <h2 class="corr-section-title">Recent Corrections</h2>
-      ${data.recentCorrections.length > 0 ? html`
+      ${filteredCorrections.length > 0 ? html`
         <div class="corr-list">
-          ${data.recentCorrections.slice(-20).reverse().map(c => html`
+          ${filteredCorrections.slice(-20).reverse().map(c => {
+            const snippet = getTriggerSnippet(c.correctionRequests);
+            return html`
             <details class="corr-card">
               <summary class="corr-card-summary">
                 <span class="corr-category-badge" style="background:${CATEGORY_COLORS[c.category] || '#8b949e'}">${CATEGORY_LABELS[c.category] || c.category}</span>
+                ${snippet ? html`<span class="corr-trigger-snippet">— "${snippet}"</span>` : null}
                 <span class="corr-card-count">${c.correctionCount} turn${c.correctionCount !== 1 ? 's' : ''}</span>
                 <span class="corr-card-tokens">${formatNum(c.wastedTokens)} tokens</span>
               </summary>
               <div class="corr-card-body">
-                <div class="corr-card-field">
-                  <div class="corr-card-label">Original prompt:</div>
-                  <div class="corr-card-value">${c.originalRequest ? html`<pre>${c.originalRequest.slice(0, 500)}</pre>` : html`<em>(first response)</em>`}</div>
+                <div class="corr-card-body-inner">
+                  <div class="corr-card-field">
+                    <div class="corr-card-label">Original prompt:</div>
+                    <div class="corr-card-value">${c.originalRequest ? renderTruncatedPre(c.originalRequest) : html`<em>(first response)</em>`}</div>
+                  </div>
+                  <div class="corr-card-field">
+                    <div class="corr-card-label">What the model produced first:</div>
+                    <div class="corr-card-value">${c.firstResponseSnippet ? renderTruncatedPre(c.firstResponseSnippet) : html`<em>N/A</em>`}</div>
+                  </div>
+                  ${c.correctionRequests.length > 0 ? html`
+                  <div class="corr-card-field">
+                    <div class="corr-card-label">Correction message${c.correctionRequests.length > 1 ? 's' : ''}:</div>
+                    <div class="corr-card-value">${c.correctionRequests.map(msg => renderTruncatedPre(msg))}</div>
+                  </div>` : null}
                 </div>
-                <div class="corr-card-field">
-                  <div class="corr-card-label">What the model produced first:</div>
-                  <div class="corr-card-value">${c.firstResponseSnippet ? html`<pre>${c.firstResponseSnippet}</pre>` : html`<em>N/A</em>`}</div>
-                </div>
-                ${c.correctionRequests.length > 0 ? html`
-                <div class="corr-card-field">
-                  <div class="corr-card-label">Correction message${c.correctionRequests.length > 1 ? 's' : ''}:</div>
-                  <div class="corr-card-value">${c.correctionRequests.map(msg => html`<pre>${msg.slice(0, 300)}</pre>`)}</div>
-                </div>` : null}
               </div>
-            </details>
-          `)}
+            </details>`;
+          })}
         </div>` : html`<p class="corr-empty">No correction loops detected. Your prompts are efficient!</p>`}
     </div>
   `, container);
