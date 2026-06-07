@@ -112,16 +112,37 @@ export { Chart };
 /* ---- Chart instance tracking ---- */
 const charts: Chart[] = [];
 
-export function trackChart(c: Chart): void { charts.push(c); }
+/** Safety cap: prevent unbounded accumulation of Chart.js instances.
+ *  If we exceed this, all tracked charts are force-cleaned. */
+const MAX_CHARTS = 32;
+
+export function trackChart(c: Chart): void {
+  if (charts.length >= MAX_CHARTS) {
+    destroyCharts();
+  }
+  charts.push(c);
+}
 
 export function destroyCharts(): void {
   for (const c of charts) c.destroy();
   charts.length = 0;
 }
 
+/** Destroy the chart associated with the given canvas id.
+ *  Also destroys any zombie charts whose canvas is no longer in the DOM. */
 export function destroyChartById(canvasId: string): void {
+  // Match by canvas id
   const idx = charts.findIndex(c => (c.canvas).id === canvasId);
-  if (idx >= 0) { charts[idx].destroy(); charts.splice(idx, 1); }
+  if (idx >= 0) { charts[idx].destroy(); charts.splice(idx, 1); return; }
+
+  // Fallback: destroy any chart whose canvas element is no longer attached to the DOM
+  // (orphan charts from previous page navigations that had different canvas ids)
+  for (let i = charts.length - 1; i >= 0; i--) {
+    if (!document.contains(charts[i].canvas)) {
+      charts[i].destroy();
+      charts.splice(i, 1);
+    }
+  }
 }
 
 /* ---- DOM helpers ---- */
