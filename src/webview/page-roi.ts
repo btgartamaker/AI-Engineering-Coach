@@ -83,7 +83,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
                 <td style="padding:6px 8px;text-align:right;color:${m.correctionRate > 0.2 ? COLORS.red : m.correctionRate > 0.1 ? COLORS.yellow : COLORS.green};">${(m.correctionRate * 100).toFixed(1)}%</td>
                 <td style="padding:6px 8px;text-align:right;">${m.estimatedTimeSaved.toFixed(1)}m</td>
               </tr>
-            `).join('')}
+            `)}
           </tbody>
         </table>
         ${data.modelROI.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">No model cost data available yet.</p>` : ''}
@@ -112,8 +112,8 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
   renderTrendChart(data);
 }
 
-function renderModelComparison(data: ROIData): string {
-  if (data.modelROI.length < 2) return '';
+function renderModelComparison(data: ROIData): any {
+  if (data.modelROI.length < 2) return null;
 
   const sortedByLocPerDollar = [...data.modelROI].sort((a, b) => b.loCPerDollar - a.loCPerDollar);
   const sortedByCost = [...data.modelROI].sort((a, b) => a.avgCostPerRequest - b.avgCostPerRequest);
@@ -125,7 +125,7 @@ function renderModelComparison(data: ROIData): string {
       <div style="margin-bottom:4px;">Most affordable: <strong>${sortedByCost[0].modelId}</strong> ($${(sortedByCost[0].avgCostPerRequest * 1000).toFixed(2)}/K requests)</div>
       <div>Most accurate: <strong>${sortedByAccuracy[0].modelId}</strong> (${(sortedByAccuracy[0].correctionRate * 100).toFixed(1)}% correction rate)</div>
     </div>
-  `.toString();
+  `;
 }
 
 function renderTrendChart(data: ROIData): void {

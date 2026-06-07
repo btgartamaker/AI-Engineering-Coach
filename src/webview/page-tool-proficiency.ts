@@ -125,7 +125,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
                 <td style="padding:6px 8px;text-align:right;">${t.uniqueSessions}</td>
                 <td style="padding:6px 8px;text-align:right;">${t.avgTokensPerCall.toLocaleString()}</td>
               </tr>
-            `).join('')}
+            `)}
           </tbody>
         </table>
         ${data.toolsUsed.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">No tool data available yet.</p>` : ''}
