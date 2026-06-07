@@ -5,8 +5,13 @@ group: prompt-quality
 severity: medium
 scope: requests
 requiresIdeContext: true
-version: 1
+version: 2
 tags: [agent, mode, routing, cost]
+harnessOverrides:
+  pi.suggestion: "Use Ask/Chat mode in Pi for quick questions. Reserve agent-style requests for tasks that need file edits, terminal commands, or multi-step coordination."
+  pi.description: "{{count}} Pi agent-mode requests ({{pct}}) were trivially short ({{extra.maxMessageLength}} chars) with no tool calls, file edits, or code output. Simple questions don't need the full agent pipeline."
+  claude.suggestion: "Use /ask for quick questions in Claude Code. Reserve agent mode for tasks needing file edits, terminal access, or multi-step coordination."
+  claude.description: "{{count}} Claude Code agent requests ({{pct}}) were trivially short with no tool calls. Use /ask for simple questions."
 thresholds:
   maxMessageLength: 80
   minSample: 10

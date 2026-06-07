@@ -5,8 +5,14 @@ group: prompt-quality
 severity: medium
 scope: requests
 requiresIdeContext: true
-version: 1
+version: 2
 tags: [prompt, context, files]
+harnessOverrides:
+  claude.suggestion: "Use @file to reference relevant files in your prompts so Claude Code can see the relevant code context."
+  claude.description: "{{pct}} of Claude Code requests have no file references. Claude gives better answers with file context."
+  pi.suggestion: "Use @file to reference relevant files in your prompts so Pi can see the relevant code context."
+  pi.description: "{{pct}} of Pi requests have no file references. Pi gives better answers with file context."
+  gemini.description: "{{pct}} of Gemini Code Assist requests have no file references. Gemini gives better answers with file context."
 thresholds:
   maxNoContextRate: 0.7
   minSample: 10
@@ -19,7 +25,7 @@ Detects requests that have no file references, meaning Copilot cannot see the re
 {{pct}} of requests have no file references. Copilot gives better answers with file context.
 
 # How to Improve
-Use #file to reference relevant files, or open files in the editor so Copilot can use them as context.
+Reference relevant files in your prompts — use @file (Claude, Pi), #file (Copilot), or just open files in the editor so your AI assistant can use them as context.
 
 # Examples
 "{{message}}..."

@@ -21,10 +21,18 @@ vi.mock('./parser-xcode', () => ({
   parseXcodeDatabasesAsync: vi.fn(() => Promise.resolve([])),
 }));
 
+vi.mock('./parser-pi', () => ({
+  findPiDirs: vi.fn(() => []),
+}));
+
+vi.mock('./parser-gemini', () => ({
+  findGeminiDirs: vi.fn(() => []),
+}));
+
 vi.mock('./parser-harnesses', () => ({
   collectExternalHarnessesSync: vi.fn(),
   collectExternalHarnessesAsync: vi.fn(() => Promise.resolve()),
-  EXTERNAL_HARNESS_SET: new Set(['Claude', 'Codex', 'OpenCode']),
+  EXTERNAL_HARNESS_SET: new Set(['Claude', 'Codex', 'OpenCode', 'pi', 'Gemini']),
 }));
 
 vi.mock('./cache', () => ({
@@ -64,6 +72,9 @@ import {
   parseXcodeDatabases,
   parseXcodeDatabasesAsync,
 } from './parser-xcode';
+import { findPiDirs } from './parser-pi';
+import { findGeminiDirs } from './parser-gemini';
+
 import {
   collectExternalHarnessesAsync,
   collectExternalHarnessesSync,
@@ -113,6 +124,9 @@ beforeEach(() => {
   vi.mocked(parseXcodeDatabasesAsync).mockResolvedValue([]);
 
   vi.mocked(collectExternalHarnessesSync).mockImplementation(() => {});
+  vi.mocked(findPiDirs).mockReturnValue([]);
+  vi.mocked(findGeminiDirs).mockReturnValue([]);
+
   vi.mocked(collectExternalHarnessesAsync).mockResolvedValue();
 
   vi.mocked(getMemoryCache).mockReturnValue(null);
@@ -138,11 +152,13 @@ describe('LOAD_PHASES', () => {
 });
 
 describe('findLogsDirs', () => {
-  it('combines VS Code and Xcode directories', () => {
+  it('combines VS Code, Xcode, and Pi directories', () => {
     vi.mocked(findVsCodeDirs).mockReturnValue(['/logs/vscode-a', '/logs/vscode-b']);
     vi.mocked(findXcodeDirs).mockReturnValue([XCODE_DIR]);
+    vi.mocked(findPiDirs).mockReturnValue(['/logs/pi']);
+    vi.mocked(findGeminiDirs).mockReturnValue(['/logs/gemini']);
 
-    expect(findLogsDirs()).toEqual(['/logs/vscode-a', '/logs/vscode-b', XCODE_DIR]);
+    expect(findLogsDirs()).toEqual(['/logs/vscode-a', '/logs/vscode-b', XCODE_DIR, '/logs/pi', '/logs/gemini']);
   });
 });
 

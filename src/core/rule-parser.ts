@@ -62,6 +62,7 @@ interface ParsedFrontmatter {
   metric?: string;
   /** Rule dependency IDs */
   requires?: string[];
+  harnessOverrides?: Record<string, string>;
 }
 
 function parseNestedValue(line: string, nestedObj: Record<string, number | string | string[]>): void {
@@ -355,6 +356,7 @@ export function parseRule(markdown: string): DetectionRule | null {
     patterns,
     fileTypes,
     extendsRule: fm.extends ? String(fm.extends) : undefined,
+    harnessOverrides: fm.harnessOverrides ? { ...fm.harnessOverrides } : undefined,
     tests,
     source: 'built-in',
     sourceFilePath: '',
@@ -404,6 +406,12 @@ export function serializeRule(rule: DetectionRule): string {
   lines.push(`version: ${rule.version}`);
   if (rule.tags.length > 0) lines.push(`tags: [${rule.tags.join(', ')}]`);
   if (rule.extendsRule) lines.push(`extends: ${rule.extendsRule}`);
+  if (rule.harnessOverrides) {
+    lines.push('harnessOverrides:');
+    for (const [key, value] of Object.entries(rule.harnessOverrides)) {
+      lines.push(`  ${key}: ${JSON.stringify(value)}`);
+    }
+  }
   if (Object.keys(rule.thresholds).length > 0) {
     lines.push('thresholds:');
     for (const [k, v] of Object.entries(rule.thresholds)) {

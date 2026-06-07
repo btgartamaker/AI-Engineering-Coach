@@ -79,6 +79,12 @@ export function resolveWorkspaceRoot(id: string, ws: Workspace): string | null {
   if (id.startsWith('codex-') || id.startsWith('opencode-')) {
     return fs.existsSync(ws.path) ? ws.path : null;
   }
+  if (id.startsWith('pi-')) {
+    return resolvePiRoot(ws.path);
+  }
+  if (id.startsWith('gemini-')) {
+    return resolveGeminiRoot(ws.path);
+  }
   return resolveVsCodeRoot(ws.path) ?? resolveCLIRoot(ws.path);
 }
 
@@ -113,6 +119,44 @@ function resolveClaudeRoot(projectDir: string): string | null {
     if (!isRecord(parsed) || typeof parsed.cwd !== 'string') return null;
     return fs.existsSync(parsed.cwd) ? parsed.cwd : null;
   } catch { /* ignore */ }
+  return null;
+}
+
+/** Resolve the root workspace directory for a Pi session workspace.
+ *  The workspace path for Pi is already set to the real project root
+ *  (from session cwd header) by the external harness collector.
+ *  Just verify it exists and return it. */
+function resolvePiRoot(projectDir: string): string | null {
+  return fs.existsSync(projectDir) ? projectDir : null;
+}
+
+/** Resolve the root workspace directory for a Gemini session workspace.
+ *  Gemini sessions live under ~/.gemini/tmp/<project-name>/chats/.
+ *  We walk up two levels and look up the project root in projects.json. */
+function resolveGeminiRoot(chatsDir: string): string | null {
+  if (!fs.existsSync(chatsDir)) return null;
+  // chatsDir = .../tmp/<project-name>/chats
+  // Walk up to get <project-name>, then look up in projects.json
+  const chatsParent = path.dirname(chatsDir);   // .../tmp/<project-name>
+  const projectName = path.basename(chatsParent);
+
+  // Try to resolve via projects.json
+  const home = process.env.HOME || process.env.USERPROFILE || '';
+  if (home) {
+    const projectsJson = path.join(home, '.gemini', 'projects.json');
+    try {
+      const raw = fs.readFileSync(projectsJson, 'utf-8');
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (isRecord(parsed.projects)) {
+        for (const [rootPath, name] of Object.entries(parsed.projects)) {
+          if (name === projectName && fs.existsSync(rootPath)) {
+            return rootPath;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
   return null;
 }
 
@@ -394,26 +438,61 @@ export function computeInstructionQualityScore(files: ConfigFileInfo[]): number 
   return Math.round(totalScore / mdFiles.length);
 }
 
+/** Return the recommended instruction file path for a given harness. */
+function harnessInstructionFile(harness?: string): string {
+  switch (harness) {
+    case 'Claude': return 'CLAUDE.md';
+    case 'pi': return 'AGENTS.md';
+    case 'Gemini': return '.gemini/settings.json';
+    case 'Codex': return 'SPEC.md';
+    case 'OpenCode': return '.instructions.md';
+    default: return '.github/copilot-instructions.md';
+  }
+}
+
+/** Return the harness display name for use in suggestion text. */
+function harnessDisplayName(harness?: string): string {
+  switch (harness) {
+    case 'Claude': return 'Claude Code';
+    case 'pi': return 'Pi';
+    case 'Gemini': return 'Gemini Code Assist';
+    case 'Codex': return 'Codex CLI';
+    case 'OpenCode': return 'OpenCode';
+    default: return 'GitHub Copilot';
+  }
+}
+
 export function generateWorkspaceSuggestions(
   files: ConfigFileInfo[],
   hookCoverage: HookCoverageInfo | null,
   isClaudeWorkspace: boolean,
+  harness?: string,
 ): string[] {
   const suggestions: string[] = [];
+  const instrFile = harnessInstructionFile(harness);
+  const displayName = harnessDisplayName(harness);
 
   const hasAnyInstructions = files.some(f => f.kind === 'instruction' || f.kind === 'claude-md');
   if (!hasAnyInstructions) {
-    suggestions.push('Create a .github/copilot-instructions.md file with project conventions -- this is the single most impactful context file for GitHub Copilot.');
+    if (harness === 'pi') {
+      suggestions.push('Create an AGENTS.md file with project conventions -- this is the single most impactful context file for Pi.');
+    } else if (harness === 'Claude') {
+      suggestions.push('Create a CLAUDE.md file with project conventions -- this is the single most impactful context file for Claude Code.');
+    } else if (harness === 'Gemini') {
+      suggestions.push('Add a .gemini/settings.json file with project instructions -- this is the single most impactful context file for Gemini Code Assist.');
+    } else {
+      suggestions.push(`Create a ${instrFile} file with project conventions -- this is the single most impactful context file for ${displayName}.`);
+    }
   }
 
   for (const f of files) {
     if (f.sizeVerdict === 'oversized') {
       if (f.kind === 'instruction' && f.lines > OVERSIZED_INSTRUCTION_LINES) {
-        suggestions.push(`${f.relativePath} has ${f.lines} lines -- split domain-specific rules into .github/instructions/*.instructions.md files or .github/skills/*/SKILL.md for progressive disclosure.`);
+        suggestions.push(`${f.relativePath} has ${f.lines} lines -- split domain-specific rules into instructions/ sub-files or skills/*/SKILL.md files for progressive disclosure.`);
       } else if (f.kind === 'claude-md') {
         suggestions.push(`${f.relativePath} has ${f.lines} lines (recommended: <${CLAUDE_MD_RECOMMENDED_LINES}). Use @import syntax to load domain-specific rules from sub-files.`);
-      } else if (f.relativePath === '.github/copilot-instructions.md' && f.chars > COPILOT_INSTRUCTION_MAX_CHARS) {
-        suggestions.push(`${f.relativePath} exceeds ${COPILOT_INSTRUCTION_MAX_CHARS} chars -- Copilot code review silently truncates beyond this. Move scoped rules to .github/instructions/*.instructions.md.`);
+      } else if ((f.relativePath === '.github/copilot-instructions.md' || f.relativePath === harnessInstructionFile(harness)) && f.chars > COPILOT_INSTRUCTION_MAX_CHARS) {
+        suggestions.push(`${f.relativePath} exceeds ${COPILOT_INSTRUCTION_MAX_CHARS} chars -- ${displayName} silently truncates beyond this. Move scoped rules to sub-files for progressive disclosure.`);
       }
     }
   }
@@ -424,12 +503,22 @@ export function generateWorkspaceSuggestions(
 
   const hasSkills = files.some(f => f.kind === 'skill');
   if (!hasSkills && files.some(f => f.kind === 'instruction' && f.lines > 100)) {
-    suggestions.push('Consider extracting domain-specific knowledge into .github/skills/*/SKILL.md files. Skills use progressive disclosure: only the name/description is loaded initially, full instructions load only when matched.');
+    if (harness === 'pi' || harness === 'Claude') {
+      suggestions.push('Consider extracting domain-specific knowledge into skills/*/SKILL.md files (in .claude/skills/ or .agents/skills/). Skills use progressive disclosure: only the name/description is loaded initially, full instructions load only when matched.');
+    } else {
+      suggestions.push('Consider extracting domain-specific knowledge into .github/skills/*/SKILL.md files. Skills use progressive disclosure: only the name/description is loaded initially, full instructions load only when matched.');
+    }
   }
 
   const hasPrompts = files.some(f => f.kind === 'prompt');
   if (!hasPrompts) {
-    suggestions.push('Save reusable prompts as .github/prompts/*.prompt.md files. These can be invoked with /promptName in chat.');
+    if (harness === 'Claude') {
+      suggestions.push('Create reusable instruction files and use @import syntax to compose them. Claude Code loads CLAUDE.md on session start.');
+    } else if (harness === 'pi') {
+      suggestions.push('Create skills/*/SKILL.md files for reusable domain knowledge. Pi loads skills contextually based on prompt matching.');
+    } else {
+      suggestions.push('Save reusable prompts as .github/prompts/*.prompt.md files. These can be invoked with /promptName in chat.');
+    }
   }
 
   if (isClaudeWorkspace) {

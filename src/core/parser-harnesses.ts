@@ -6,10 +6,13 @@
 /* External harness collection registry for parser orchestration. */
 
 import * as fs from 'fs';
+import * as path from 'path';
 import { Workspace, Session } from './types';
 import { findClaudeDirs, parseClaudeSessions, parseClaudeSessionsAsync } from './parser-claude';
 import { findCodexDirs, parseCodexSessions } from './parser-codex';
 import { findOpenCodeDirs, parseOpenCodeSessions } from './parser-opencode';
+import { findPiDirs, parsePiSessions } from './parser-pi';
+import { findGeminiDirs, parseGeminiSessions } from './parser-gemini';
 
 type WorkspaceMap = Map<string, Workspace>;
 
@@ -69,6 +72,34 @@ const EXTERNAL_HARNESSES: ExternalHarnessCollector[] = [
       }
     },
   },
+  {
+    name: 'Gemini Code Assist',
+    collectSync(ctx) {
+      for (const chatsDir of findGeminiDirs()) {
+        for (const session of parseGeminiSessions(chatsDir)) {
+          addSession(ctx.workspaces, ctx.sessions, session, chatsDir);
+        }
+      }
+    },
+  },
+  {
+    name: 'Pi',
+    collectSync(ctx) {
+      for (const piDir of findPiDirs()) {
+        // parsePiSessions returns per-workspace results; we need the
+        // workspace-specific path for config health root resolution.
+        // Reconstruct it from the workspaceId by stripping the 'pi-' prefix
+        // and joining with the piDir.
+        for (const { sessions, workspaceId } of parsePiSessions(piDir)) {
+          // Derive the workspace directory name from the workspaceId.
+          // workspaceId is "pi-<encodedDirName>"; the encoded name is the suffix.
+          const encodedName = workspaceId.startsWith('pi-') ? workspaceId.slice(3) : workspaceId;
+          const wsPath = path.join(piDir, encodedName);
+          for (const session of sessions) addSession(ctx.workspaces, ctx.sessions, session, wsPath);
+        }
+      }
+    },
+  },
 ];
 
 export interface ExternalHarnessProgressHandlers {
@@ -88,7 +119,8 @@ export function hasExternalHarnessSources(): boolean {
   // string and probe relative paths (e.g. `.claude/projects`) under the current
   // working directory, which could report false positives. Bail out instead.
   if (!process.env.HOME && !process.env.USERPROFILE) return false;
-  return findClaudeDirs().length > 0 || findCodexDirs().length > 0 || findOpenCodeDirs().length > 0;
+  return findClaudeDirs().length > 0 || findCodexDirs().length > 0 || findOpenCodeDirs().length > 0
+    || findPiDirs().length > 0 || findGeminiDirs().length > 0;
 }
 
 export function collectExternalHarnessesSync(workspaces: WorkspaceMap, sessions: Session[]): void {
@@ -106,6 +138,8 @@ export const EXTERNAL_HARNESS_SET = new Set<string>([
   'Claude',
   'Codex',
   'OpenCode',
+  'pi',
+  'Gemini',
 ]);
 
 export async function collectExternalHarnessesAsync(

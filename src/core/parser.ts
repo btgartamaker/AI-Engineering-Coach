@@ -13,6 +13,8 @@ import { ParseContext, prefetchCache } from './parser-shared';
 import { getMemoryCache, setMemoryCache, computeDirMetasAsync, loadCacheData, saveCacheData, findStaleDirs, clearCache, stripSessionsForMemory } from './cache';
 import type { DirMetas, ParseResult, SessionSource } from './cache';
 import { findVsCodeDirs, scanVsCodeDirs, processWorkspaceEntry, processWorkspaceEntryAsync, harnessFromPath } from './parser-vscode';
+import { findPiDirs } from './parser-pi';
+import { findGeminiDirs } from './parser-gemini';
 import { findXcodeDirs, parseXcodeDatabases, parseXcodeDatabasesAsync } from './parser-xcode';
 import { collectExternalHarnessesAsync, collectExternalHarnessesSync, EXTERNAL_HARNESS_SET } from './parser-harnesses';
 import { warnCore } from './log';
@@ -99,7 +101,7 @@ function pct(phase: number, intraPhase: number): number {
 }
 
 export function findLogsDirs(): string[] {
-  return [...findVsCodeDirs(), ...findXcodeDirs()];
+  return [...findVsCodeDirs(), ...findXcodeDirs(), ...findPiDirs(), ...findGeminiDirs()];
 }
 
 function partitionDirs(logsDirs: string[]): { vsCodeDirs: string[]; xcodeDirs: string[] } {

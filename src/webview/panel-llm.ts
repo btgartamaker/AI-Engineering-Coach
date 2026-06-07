@@ -323,6 +323,98 @@ const LLM_FAMILY = 'gpt-5.4-mini';
 const LLM_REQUEST_TIMEOUT_MS = 90_000;
 
 /**
+ * Configuration keys for custom LLM provider settings.
+ */
+const CFG_PROVIDER = 'aiEngineerCoach.llmProvider';
+const CFG_CUSTOM_ENDPOINT = 'aiEngineerCoach.llmCustomEndpoint';
+const CFG_CUSTOM_MODEL = 'aiEngineerCoach.llmCustomModel';
+const CFG_CUSTOM_API_KEY = 'aiEngineerCoach.llmCustomApiKey';
+const CFG_CUSTOM_TIMEOUT = 'aiEngineerCoach.llmCustomTimeout';
+
+/**
+ * Read a string setting from VS Code configuration, returning the default if unset.
+ */
+function getSetting<T>(key: string, fallback: T): T {
+  try {
+    const config = vscode.workspace.getConfiguration();
+    return config.get<T>(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Call a custom OpenAI-compatible API (Ollama, LM Studio, OpenRouter, etc.)
+ * and return the response text. Falls back to Copilot on network errors.
+ */
+async function callCustomProvider(messages: { role: string; content: string }[], jsonMode?: boolean): Promise<string> {
+  const endpoint = getSetting<string>(CFG_CUSTOM_ENDPOINT, 'http://127.0.0.1:11434/v1');
+  const model = getSetting<string>(CFG_CUSTOM_MODEL, '');
+  const apiKey = getSetting<string>(CFG_CUSTOM_API_KEY, '');
+  const timeoutSec = getSetting<number>(CFG_CUSTOM_TIMEOUT, 120);
+
+  if (!endpoint) throw new Error('Custom LLM endpoint not configured. Set aiEngineerCoach.llmCustomEndpoint in settings.');
+
+  // Most local models don't support response_format (JSON mode), so we
+  // inject a system message asking for JSON output instead.
+  const finalMessages = [...messages];
+  if (jsonMode) {
+    // Check if there's already a system message; if not, prepend one
+    const hasSystem = finalMessages.some(m => m.role === 'system');
+    if (!hasSystem) {
+      finalMessages.unshift({ role: 'system', content: 'You are a helpful assistant. ALWAYS respond with valid JSON only. No markdown fences, no explanation, no commentary.' });
+    } else {
+      // Append instruction to existing system message
+      finalMessages[0].content += '\n\nIMPORTANT: Respond with valid JSON only. No markdown fences, no explanation, no commentary.';
+    }
+  }
+
+  const body: Record<string, unknown> = {
+    model: model || undefined,
+    messages: finalMessages,
+    stream: false,
+  };
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  const url = endpoint.endsWith('/chat/completions') ? endpoint : `${endpoint.replace(/\/+$/, '')}/chat/completions`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutSec * 1000);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'unknown error');
+      throw new Error(`Custom provider returned ${response.status}: ${errorText}`);
+    }
+    const data = (await response.json()) as Record<string, unknown>;
+    const choices = data.choices as Array<Record<string, unknown>> | undefined;
+    if (!choices || choices.length === 0) {
+      throw new Error('Custom provider returned no choices');
+    }
+    const message = choices[0].message as Record<string, unknown> | undefined;
+    const content = message?.content as string | undefined;
+    if (!content) {
+      throw new Error('Custom provider returned empty response');
+    }
+    return content;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Pick a Copilot chat model. Tries the preferred family first, then a short
  * fallback list, then any available model. Throws a descriptive error when
  * nothing is available so callers can surface a useful message.
@@ -338,6 +430,31 @@ async function selectModel(): Promise<vscode.LanguageModelChat> {
   throw new Error('No language model available. Make sure GitHub Copilot is installed and signed in.');
 }
 
+/**
+ * Check if a custom LLM provider is configured in VS Code settings.
+ */
+function isCustomProviderEnabled(): boolean {
+  return getSetting<string>(CFG_PROVIDER, 'copilot') === 'custom';
+}
+
+/**
+ * Extract plain text content from a LanguageModelChatMessage.
+ * The content can be a string or an array of parts.
+ */
+function extractMessageContent(m: vscode.LanguageModelChatMessage): string {
+  if (typeof m.content === 'string') return m.content;
+  return m.content.map((part: unknown) => {
+    if (part && typeof part === 'object') {
+      const p = part as Record<string, unknown>;
+      return typeof p.value === 'string' ? p.value
+        : typeof p.text === 'string' ? p.text
+        : typeof p.content === 'string' ? p.content
+        : '';
+    }
+    return String(part);
+  }).join('\n');
+}
+
 /** Race a promise against a timeout. Rejects with a clear message on timeout. */
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -350,6 +467,14 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 }
 
 export async function callLlm(messages: vscode.LanguageModelChatMessage[]): Promise<string> {
+  if (isCustomProviderEnabled()) {
+    const plainMessages = messages.map(m => ({
+      role: String(m.role ?? 'user'),
+      content: extractMessageContent(m),
+    }));
+    return await callCustomProvider(plainMessages, false);
+  }
+
   const model = await selectModel();
 
   let lastError: unknown;
@@ -375,6 +500,28 @@ export async function callLlm(messages: vscode.LanguageModelChatMessage[]): Prom
 }
 
 export async function callLlmJson<T>(messages: vscode.LanguageModelChatMessage[], jsonSchema?: JsonSchemaSpec): Promise<T> {
+  if (isCustomProviderEnabled()) {
+    const plainMessages = messages.map(m => ({
+      role: String(m.role ?? 'user'),
+      content: extractMessageContent(m),
+    }));
+    const text = await callCustomProvider(plainMessages, !!jsonSchema);
+    if (!text.trim()) {
+      throw new Error('Custom provider returned empty response. Check that your model is running and responding.');
+    }
+    try {
+      return JSON.parse(text.trim()) as T;
+    } catch {
+      try {
+        return parseLlmJson<T>(text);
+      } catch (parseErr) {
+        // Show a helpful snippet of what the model returned
+        const snippet = text.length > 200 ? text.slice(0, 200) + '...' : text;
+        throw new Error(`Custom model didn't return valid JSON. Response was: "${snippet.replaceAll(/\n/g, ' ')}". Try a different model or check that your endpoint is reachable.`);
+      }
+    }
+  }
+
   const model = await selectModel();
 
   const options: vscode.LanguageModelChatRequestOptions = jsonSchema

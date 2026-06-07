@@ -86,6 +86,12 @@ export class ConfigAnalyzer extends AnalyzerBase {
   ): boolean {
     if (f?.workspaceId) return false;
     if (activity?.lastDate && activity.lastDate < cutoffDate) return true;
+    // External harnesses (Claude, Pi, Codex, OpenCode) use real project dirs,
+    // so all of them are meaningful. VS Code workspace storage can have hundreds
+    // of small/transient workspaces, so we require at least 50 requests there.
+    if (activity?.harness === 'Claude' || activity?.harness === 'pi' || activity?.harness === 'Codex' || activity?.harness === 'OpenCode' || activity?.harness === 'Gemini') {
+      return false;
+    }
     return !!activity && activity.requestCount < 50;
   }
 
@@ -130,7 +136,7 @@ export class ConfigAnalyzer extends AnalyzerBase {
       progressiveDisclosureScore: computeProgressiveDisclosureScore(configFiles),
       instructionQualityScore: computeInstructionQualityScore(configFiles),
       hookCoverage,
-      suggestions: generateWorkspaceSuggestions(configFiles, hookCoverage, isClaudeWorkspace),
+      suggestions: generateWorkspaceSuggestions(configFiles, hookCoverage, isClaudeWorkspace, harness),
       sessionCount: activity?.sessionCount ?? 0,
       requestCount: activity?.requestCount ?? 0,
       lastActivity: activity?.lastTimestamp ?? null,
@@ -158,7 +164,7 @@ export class ConfigAnalyzer extends AnalyzerBase {
       progressiveDisclosureScore: 0,
       instructionQualityScore: 0,
       hookCoverage: null,
-      suggestions: ['Unable to resolve workspace root path. Config file analysis unavailable.'],
+      suggestions: ['Unable to resolve workspace root path. Config file analysis unavailable for ' + (activity?.harness || 'this tool') + '.'],
       sessionCount: activity?.sessionCount ?? 0,
       requestCount: activity?.requestCount ?? 0,
       lastActivity: activity?.lastTimestamp ?? null,
@@ -250,6 +256,25 @@ export class ConfigAnalyzer extends AnalyzerBase {
         kind: 'workspace' as const,
         stats: { requests: w.requestCount, sessions: w.sessionCount },
       }));
+      // Build harness-specific suggestion for the first workspace in the list
+      const firstHarness = activeNoContext[0]?.harness || '';
+      const ctxSuggestion = (() => {
+        switch (true) {
+          case firstHarness.includes('Claude'):
+            return 'Create a CLAUDE.md file in your most active workspaces. This is the single highest-leverage action for better AI outputs in Claude Code.';
+          case firstHarness.includes('pi'):
+            return 'Create an AGENTS.md file in your most active workspaces. This is the single highest-leverage action for better AI outputs in Pi.';
+          case firstHarness.includes('Gemini'):
+            return 'Add a .gemini/settings.json file with project instructions in your most active workspaces. This is the single highest-leverage action for better AI outputs in Gemini Code Assist.';
+          case firstHarness.includes('Codex'):
+            return 'Create a SPEC.md file in your most active workspaces. This is the single highest-leverage action for better AI outputs in Codex CLI.';
+          case firstHarness.includes('OpenCode'):
+            return 'Create an .instructions.md file in your most active workspaces. This is the single highest-leverage action for better AI outputs in OpenCode.';
+          default:
+            return 'Add a .github/copilot-instructions.md (for VS Code) or CLAUDE.md (for Claude Code) to your most active workspaces. This is the single highest-leverage action for better AI outputs.';
+        }
+      })();
+
       patterns.push({
         id: 'no-context-files',
         name: 'Active Workspaces Without Context Files',
@@ -257,7 +282,7 @@ export class ConfigAnalyzer extends AnalyzerBase {
         group: 'tool-mastery',
         occurrences: activeNoContext.length,
         description: `${activeNoContext.length} workspace(s) with 100+ requests have no instruction files. Without context files, every prompt starts from scratch.`,
-        suggestion: 'Add .github/copilot-instructions.md (for VS Code) or CLAUDE.md (for Claude Code) to your most active workspaces. This is the single highest-leverage action for better AI outputs.',
+        suggestion: ctxSuggestion,
         examples: activeNoContext.slice(0, 5).map(w => `${w.workspaceName} (${w.requestCount} requests, ${w.harness})`),
         details,
         weeklyHist: { labels: [], counts: [] },
@@ -309,6 +334,15 @@ export class ConfigAnalyzer extends AnalyzerBase {
             withTools: score.withTools,
           },
         }];
+        const fileRefSyntax = (() => {
+          switch (harness) {
+            case 'Claude': return '@file';
+            case 'pi': return '@file';
+            case 'Gemini': return '#file';
+            case 'Codex': return '@file or #file';
+            default: return '#file';
+          }
+        })();
         patterns.push({
           id: `low-context-provision-${harness.toLowerCase().replaceAll(/\s+/g, '-')}`,
           name: `Low Context Provision (${harness})`,
@@ -316,7 +350,7 @@ export class ConfigAnalyzer extends AnalyzerBase {
           group: 'tool-mastery',
           occurrences: score.totalRequests,
           description: `${harness}: ${score.totalRequests} requests with context score ${score.score}/100. Only ${fileRefPct}% include file references, ${instrPct}% use custom instructions.`,
-          suggestion: `In ${harness}, reference files with #file, add .instructions.md files, and use skills/prompts to provide richer context.`,
+          suggestion: `In ${harness}, reference files with ${fileRefSyntax}, add instruction files, and use skills/prompts to provide richer context.`,
           examples: [],
           details: provDetails,
           weeklyHist: { labels: [], counts: [] },

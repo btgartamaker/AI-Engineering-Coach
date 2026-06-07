@@ -166,6 +166,11 @@ export interface DetectionRule {
   /** Parent rule ID for inheritance (extends: in frontmatter) */
   extendsRule?: string;
 
+  /** Harness-specific message overrides. Key = harness name (pi, claude, codex, gemini).
+   *  Dot-notation flattened: "pi.suggestion" overrides the suggestion template for Pi,
+   *  "pi.description" overrides the description template for Pi. */
+  harnessOverrides?: Record<string, string>;
+
   /** Inline test fixtures */
   tests: Array<{ input: Record<string, unknown>; expect: 'triggered' | 'clean' }>;
 

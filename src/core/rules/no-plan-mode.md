@@ -5,8 +5,13 @@ group: tool-mastery
 severity: medium
 scope: requests
 requiresIdeContext: true
-version: 1
+version: 2
 tags: [tools, planning, agent]
+harnessOverrides:
+  pi.suggestion: "Before complex tasks, outline your approach in a prompt first. Planning helps Pi understand scope and avoid wasted iterations."
+  pi.description: "{{extra.agenticReqs}} Pi agentic requests with no evidence of planning. Jumping straight to implementation often leads to wrong approaches."
+  claude.suggestion: "Use /plan in Claude Code before complex tasks. Planning helps define scope and approach before implementation."
+  claude.description: "{{extra.agenticReqs}} Claude Code agentic requests with no /plan usage. Jumping straight to implementation often leads to wrong approaches."
 thresholds:
   minReqs: 30
   agentRate: 0.3
@@ -19,7 +24,7 @@ Detects heavy agentic usage with no use of plan mode, which helps the agent unde
 {{extra.agenticReqs}} agentic requests but no use of plan mode. Jumping straight to implementation often leads to wrong approaches.
 
 # How to Improve
-Use plan mode (or /plan) before complex tasks. Planning helps the agent understand scope, break down work, and avoid wasted iterations.
+Plan before complex tasks. Outline your approach, define scope, and break down work before implementation. In VS Code Copilot, use Plan mode. In Claude Code, use /plan. For other tools, write a structured prompt describing the approach first.
 
 # Examples
 Switch to Plan mode in the mode picker before starting large features

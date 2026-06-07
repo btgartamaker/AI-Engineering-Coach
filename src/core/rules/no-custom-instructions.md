@@ -5,8 +5,15 @@ group: tool-mastery
 severity: medium
 scope: requests
 requiresIdeContext: true
-version: 1
+version: 2
 tags: [tools, instructions, personalization]
+harnessOverrides:
+  claude.suggestion: "Create a CLAUDE.md file in your workspace to give Claude Code persistent context about your project conventions, stack, and coding style."
+  claude.description: "Only {{extra.usagePct}}% of Claude Code requests use custom instructions. Missing out on personalized responses."
+  pi.suggestion: "Add an AGENTS.md or .instructions.md file in your workspace to give Pi persistent context about your project conventions, stack, and coding style."
+  pi.description: "Only {{extra.usagePct}}% of Pi requests use custom instructions. Missing out on personalized responses."
+  gemini.suggestion: "Add a .gemini/settings.json or instructions file to give Gemini Code Assist context about your project conventions."
+  codex.suggestion: "Add a SPEC.md or .instructions.md file to give Codex CLI context about your project conventions."
 thresholds:
   minRate: 0.05
   minReqs: 20
@@ -19,7 +26,7 @@ Detects when very few requests use custom instructions, missing out on personali
 Only {{extra.usagePct}}% of requests use custom instructions ({{extra.withInstructions}}/{{total}}). Missing out on personalized responses.
 
 # How to Improve
-Create a .github/copilot-instructions.md or .instructions.md file in your workspace to give Copilot persistent context about your project conventions, stack, and coding style.
+Create a .github/copilot-instructions.md (for VS Code Copilot), CLAUDE.md (for Claude Code), or AGENTS.md (for Pi) in your workspace to give your AI assistant persistent context about your project conventions, stack, and coding style.
 
 # Examples
 {{extra.withInstructions}} of {{total}} requests had custom instructions

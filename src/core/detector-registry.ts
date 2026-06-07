@@ -19,6 +19,9 @@ interface DetectorContext {
   reqs: SessionRequest[];
   sessions: Session[];
   skipIdeDetectors: boolean;
+  /** Primary harness across the session set (e.g. 'pi', 'Claude', 'Gemini').
+   *  Used to select harness-specific message overrides in rule templates. */
+  primaryHarness?: string;
 }
 
 export interface DetectorDefinition {
@@ -137,9 +140,28 @@ function collectMatchedRowDetails(
   }
 }
 
+/** Resolve harness-specific template overrides.
+ *  harnessOverrides is stored as flat keys: "pi.suggestion", "claude.description", etc. */
+function resolveHarnessOverride(
+  overrides: Record<string, string> | undefined,
+  harness: string | undefined,
+  field: 'description' | 'suggestion',
+): string | undefined {
+  if (!overrides || !harness) return undefined;
+  // Exact match first: "pi.suggestion"
+  const exact = overrides[`${harness}.${field}`];
+  if (exact) return exact;
+  // Fallback to generic harness group: "cli.suggestion" covers pi/claude/codex/opencode
+  const groupMatch = overrides[`cli.${field}`];
+  if (groupMatch && (harness === 'pi' || harness === 'Claude' || harness === 'Codex' || harness === 'OpenCode')) return groupMatch;
+  // Fallback to field without harness prefix
+  return overrides[field];
+}
+
 function emissionToAntiPattern(
   emission: DetectorEmission,
   rule: DetectionRule,
+  primaryHarness?: string,
 ): AntiPattern {
   const pct = emission.total > 0
     ? `${(emission.count / emission.total * 100).toFixed(0)}%`
@@ -154,11 +176,19 @@ function emissionToAntiPattern(
   };
 
   const severity = emission.dynamicSeverity ?? rule.severity;
-  const description = rule.descriptionTemplate
-    ? fillTemplate(rule.descriptionTemplate, vars as unknown as Record<string, unknown>)
+
+  // Check harness-specific overrides first
+  const overrideDescription = resolveHarnessOverride(rule.harnessOverrides, primaryHarness, 'description');
+  const overrideSuggestion = resolveHarnessOverride(rule.harnessOverrides, primaryHarness, 'suggestion');
+
+  const descriptionTemplate = overrideDescription ?? rule.descriptionTemplate;
+  const suggestionTemplate = overrideSuggestion ?? rule.suggestionTemplate;
+
+  const description = descriptionTemplate
+    ? fillTemplate(descriptionTemplate, vars as unknown as Record<string, unknown>)
     : `${rule.name}: ${emission.count} occurrences`;
-  const suggestion = rule.suggestionTemplate
-    ? fillTemplate(rule.suggestionTemplate, vars as unknown as Record<string, unknown>)
+  const suggestion = suggestionTemplate
+    ? fillTemplate(suggestionTemplate, vars as unknown as Record<string, unknown>)
     : '';
 
   const details: OccurrenceDetail[] = [];
@@ -244,7 +274,7 @@ function buildRegistry(): DetectorDefinition[] {
       run: (ctx) => {
         const emission = executePipeline(pipeline, rule, ctx);
         if (!checkPipelineTrigger(pipeline, emission, rule)) return null;
-        return emissionToAntiPattern(emission, rule);
+        return emissionToAntiPattern(emission, rule, ctx.primaryHarness);
       },
     });
   }
@@ -270,9 +300,20 @@ export function getActiveDetectors(skipIdeDetectors: boolean): DetectorDefinitio
   return registry.filter(detector => !skipIdeDetectors || !detector.requiresIdeContext);
 }
 
+/** Compute the primary harness from a set of sessions (by total request count). */
+function computePrimaryHarness(sessions: Session[]): string | undefined {
+  const harnessCounts = new Map<string, number>();
+  for (const s of sessions) {
+    harnessCounts.set(s.harness, (harnessCounts.get(s.harness) ?? 0) + s.requestCount);
+  }
+  const sorted = [...harnessCounts.entries()].sort((a, b) => b[1] - a[1]);
+  return sorted.length > 0 ? sorted[0][0] : undefined;
+}
+
 export function runDetectors(reqs: SessionRequest[], sessions: Session[], skipIdeDetectors: boolean): AntiPattern[] {
+  const primaryHarness = computePrimaryHarness(sessions);
   return getActiveDetectors(skipIdeDetectors)
-    .map(detector => detector.run({ reqs, sessions, skipIdeDetectors }))
+    .map(detector => detector.run({ reqs, sessions, skipIdeDetectors, primaryHarness }))
     .filter((pattern): pattern is AntiPattern => pattern !== null);
 }
 
@@ -282,11 +323,12 @@ export function runDetectors(reqs: SessionRequest[], sessions: Session[], skipId
 export function runEmitters(reqs: SessionRequest[], sessions: Session[], skipIdeDetectors: boolean): Map<string, DetectorEmission> {
   const rules = getAllRules();
   const results = new Map<string, DetectorEmission>();
+  const primaryHarness = computePrimaryHarness(sessions);
   for (const rawRule of rules) {
     if (skipIdeDetectors && rawRule.requiresIdeContext) continue;
     const rule = resolveInheritance(rawRule);
     const pipeline = parsePipeline(rule);
-    results.set(rule.id, executePipeline(pipeline, rule, { reqs, sessions, skipIdeDetectors }));
+    results.set(rule.id, executePipeline(pipeline, rule, { reqs, sessions, skipIdeDetectors, primaryHarness }));
   }
   return results;
 }

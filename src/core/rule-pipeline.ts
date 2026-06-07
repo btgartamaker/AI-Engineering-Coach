@@ -39,6 +39,8 @@ export interface DetectorContext {
   reqs: SessionRequest[];
   sessions: Session[];
   skipIdeDetectors: boolean;
+  /** Primary harness for harness-specific message overrides. */
+  primaryHarness?: string;
 }
 
 /* ================================================================== */
