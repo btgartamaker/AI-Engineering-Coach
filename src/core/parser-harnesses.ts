@@ -12,7 +12,7 @@ import { findClaudeDirs, parseClaudeSessions, parseClaudeSessionsAsync } from '.
 import { findCodexDirs, parseCodexSessions } from './parser-codex';
 import { findOpenCodeDirs, parseOpenCodeSessions } from './parser-opencode';
 import { findPiDirs, parsePiSessions } from './parser-pi';
-import { findGeminiDirs, parseGeminiSessions } from './parser-gemini';
+import { findGeminiDirs, parseGeminiSessions, parseGeminiSessionsAsync } from './parser-gemini';
 
 type WorkspaceMap = Map<string, Workspace>;
 
@@ -77,6 +77,17 @@ const EXTERNAL_HARNESSES: ExternalHarnessCollector[] = [
     collectSync(ctx) {
       for (const chatsDir of findGeminiDirs()) {
         for (const session of parseGeminiSessions(chatsDir)) {
+          addSession(ctx.workspaces, ctx.sessions, session, chatsDir);
+        }
+      }
+    },
+    async collectAsync(ctx, reportDetail) {
+      for (const chatsDir of findGeminiDirs()) {
+        const dirName = path.basename(chatsDir);
+        const sessions = await parseGeminiSessionsAsync(chatsDir, (idx, total, name) => {
+          reportDetail?.(`${idx}/${total}: ${name} [${dirName}]`);
+        });
+        for (const session of sessions) {
           addSession(ctx.workspaces, ctx.sessions, session, chatsDir);
         }
       }

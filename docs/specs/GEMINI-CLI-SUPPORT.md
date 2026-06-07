@@ -116,18 +116,18 @@ This allows the dashboard to distinguish between the two tools.
 - [x] **Harness registry** — update `parser-harnesses.ts` to include `"Gemini CLI"`
       in `EXTERNAL_HARNESS_SET`.
 
-### Phase 1b: Polish & Reliability (Pending)
+### Phase 1b: Polish & Reliability (Complete ✅)
 
-- [ ] **Workspace resolution** — use `~/.gemini/projects.json` to map project
+- [x] **Workspace resolution** — use `~/.gemini/projects.json` to map project
       hashes/short names back to real filesystem paths and set human-readable
       `workspaceName` and `workspaceRootPath`.
-- [ ] **Subagent merging** — group `kind: "subagent"` session files into their
+- [x] **Subagent merging** — group `kind: "subagent"` session files into their
       parent sessions (similar to Claude subagent handling).
-- [ ] **Async Support** — implement `parseGeminiSessionsAsync` in `parser-gemini.ts`
+- [x] **Async Support** — implement `parseGeminiSessionsAsync` in `parser-gemini.ts`
       and update `parser-harnesses.ts` to use it.
-- [ ] **Metadata Extraction** — extract `summary` and `memoryScratchpad` from `$set`
+- [x] **Metadata Extraction** — extract `summary` and `memoryScratchpad` from `$set`
       records for session labeling.
-- [ ] **Unit Tests** — add `src/core/parser-gemini.test.ts` with test cases for
+- [x] **Unit Tests** — add `src/core/parser-gemini.test.ts` with test cases for
       both Code Assist and CLI formats.
 
 ### Phase 2: Activity log parsing (Future)

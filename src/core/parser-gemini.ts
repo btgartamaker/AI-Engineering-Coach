@@ -36,10 +36,12 @@
  */
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { StringDecoder } from 'string_decoder';
 import { Session, SessionRequest, ModelUsage } from './types';
 import { assertTrustedPath, createRequest, createSession, detectDevcontainerFromRequests } from './parser-shared';
+import { warnCore } from './log';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -48,6 +50,7 @@ import { assertTrustedPath, createRequest, createSession, detectDevcontainerFrom
 /** A raw parsed line from any Gemini session JSONL file. */
 interface GeminiLine {
   sessionId?: string;
+  parentSessionId?: string;
   id?: string;
   timestamp?: string | number;
   type?: string;
@@ -132,6 +135,69 @@ function ensureNumber(value: unknown): number {
   return 0;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Workspace resolution                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Load the Gemini projects.json file which maps project root paths to
+ * short names used as directory names under ~/.gemini/tmp/.
+ * Returns a Map<shortName, fullPath> (inverted from the file).
+ */
+function loadGeminiProjects(): Map<string, string> {
+  const home = process.env.HOME || process.env.USERPROFILE || '';
+  if (!home) return new Map();
+
+  const projectsPath = path.join(home, '.gemini', 'projects.json');
+  try {
+    const content = fs.readFileSync(projectsPath, 'utf-8');
+    const parsed = JSON.parse(content) as { projects?: Record<string, string> };
+    if (!parsed.projects) return new Map();
+
+    // Invert: shortName → fullPath
+    const result = new Map<string, string>();
+    for (const [fullPath, shortName] of Object.entries(parsed.projects)) {
+      result.set(shortName, fullPath);
+    }
+    return result;
+  } catch {
+    return new Map();
+  }
+}
+
+/** Cache for projects map — loaded once per parse cycle to avoid redundant I/O. */
+let _projectsCache: Map<string, string> | null = null;
+let _projectsCacheHome: string = '';
+
+function getGeminiProjects(): Map<string, string> {
+  const home = process.env.HOME || process.env.USERPROFILE || '';
+  if (!_projectsCache || _projectsCacheHome !== home) {
+    _projectsCache = loadGeminiProjects();
+    _projectsCacheHome = home;
+  }
+  return _projectsCache;
+}
+
+/**
+ * Resolve workspace info from a short project directory name
+ * (the directory name under ~/.gemini/tmp/). Falls back to the
+ * short name if the projects file doesn't have a mapping.
+ */
+function resolveGeminiWorkspace(shortName: string): { workspaceName: string; workspaceRootPath: string | undefined } {
+  const projects = getGeminiProjects();
+  const fullPath = projects.get(shortName);
+  if (fullPath) {
+    return {
+      workspaceName: path.basename(fullPath),
+      workspaceRootPath: fullPath,
+    };
+  }
+  return {
+    workspaceName: shortName,
+    workspaceRootPath: undefined,
+  };
+}
+
 function normalizeWorkspaceName(raw: string): string {
   // Use the project directory name as the workspace name
   return raw;
@@ -213,6 +279,37 @@ function detectFormat(records: GeminiLine[], _filePath: string): GeminiFormat {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Metadata extraction from $set records                             */
+/* ------------------------------------------------------------------ */
+
+interface GeminiSessionMetadata {
+  summary?: string;
+  memoryScratchpad?: string;
+}
+
+/**
+ * Extract summary and memoryScratchpad from $set records scattered
+ * through the session JSONL file. These are written by Gemini CLI as
+ * the session progresses.
+ */
+function extractGeminiMetadata(records: GeminiLine[]): GeminiSessionMetadata {
+  let summary: string | undefined;
+  let memoryScratchpad: string | undefined;
+
+  for (const rec of records) {
+    if (!rec.$set) continue;
+    if (typeof rec.$set.summary === 'string' && rec.$set.summary) {
+      summary = rec.$set.summary;
+    }
+    if (typeof rec.$set.memoryScratchpad === 'string' && rec.$set.memoryScratchpad) {
+      memoryScratchpad = rec.$set.memoryScratchpad;
+    }
+  }
+
+  return { summary, memoryScratchpad };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Gemini CLI-specific parsing                                       */
 /* ------------------------------------------------------------------ */
 
@@ -233,13 +330,11 @@ function parseGeminiCliSessionFile(
   geminiSessionId: string,
   startTime: number,
   projectName: string,
+  workspaceRootPath?: string,
 ): Session | null {
   // Find the session header record for metadata
   const headerRecord = records.find(r => r.kind === 'main' && r.sessionId === geminiSessionId) ||
                         records.find(r => r.kind === 'main' && r.sessionId);
-
-  // Determine if this is a subagent session
-  const isSubagent = headerRecord?.kind === 'subagent' || records.some(r => r.kind === 'subagent');
 
   // Collect messages in chronological order
   const requests: SessionRequest[] = [];
@@ -413,7 +508,15 @@ function parseGeminiCliSessionFile(
     }
   }
 
-  const workspaceName = normalizeWorkspaceName(projectName);
+  // Extract session-level metadata from $set records
+  const metadata = extractGeminiMetadata(records);
+  if (metadata.summary) {
+    warnCore('parser-gemini', `Session ${geminiSessionId} summary: ${metadata.summary.slice(0, 200)}`);
+  }
+
+  const workspaceInfo = resolveGeminiWorkspace(projectName);
+  const workspaceName = workspaceInfo.workspaceName;
+  const resolvedRootPath = workspaceInfo.workspaceRootPath ?? workspaceRootPath;
   const workspaceId = encodeWorkspaceId(projectName);
 
   const creationDate = startTime || null;
@@ -440,6 +543,7 @@ function parseGeminiCliSessionFile(
     location: 'terminal',
     modelUsage,
     hasDevcontainer: detectDevcontainerFromRequests(requests),
+    workspaceRootPath: resolvedRootPath,
   });
 }
 
@@ -462,6 +566,7 @@ function parseGeminiCodeAssistSessionFile(
   geminiSessionId: string,
   startTime: number,
   projectName: string,
+  workspaceRootPath?: string,
 ): Session | null {
   const requests: SessionRequest[] = [];
   let pendingUserText = '';
@@ -575,7 +680,9 @@ function parseGeminiCodeAssistSessionFile(
 
   if (requests.length === 0) return null;
 
-  const workspaceName = normalizeWorkspaceName(projectName);
+  const workspaceInfo = resolveGeminiWorkspace(projectName);
+  const workspaceName = workspaceInfo.workspaceName;
+  const resolvedRootPath = workspaceInfo.workspaceRootPath ?? workspaceRootPath;
   const workspaceId = encodeWorkspaceId(projectName);
 
   let oldestTs = startTime || null;
@@ -594,6 +701,7 @@ function parseGeminiCodeAssistSessionFile(
     creationDate: oldestTs,
     lastMessageDate: newestTs,
     location: 'panel',
+    workspaceRootPath: resolvedRootPath,
   });
 }
 
@@ -601,7 +709,12 @@ function parseGeminiCodeAssistSessionFile(
 /*  Combined parser entry point                                       */
 /* ------------------------------------------------------------------ */
 
-function parseGeminiSessionFile(filePath: string): Session | null {
+interface GeminiParseResult {
+  session: Session;
+  isSubagent: boolean;
+}
+
+function parseGeminiSessionFile(filePath: string): GeminiParseResult | null {
   if (!fs.existsSync(filePath)) return null;
   try { assertTrustedPath(filePath); } catch { return null; }
 
@@ -632,6 +745,7 @@ function parseGeminiSessionFile(filePath: string): Session | null {
 
   const geminiSessionId = headerRecord.sessionId;
   const startTime = ensureNumber(headerRecord.startTime || headerRecord.timestamp);
+  const isSubagent = headerRecord.kind === 'subagent';
 
   // Derive workspace from file path
   // Path: .../tmp/<project-name>/chats/session-*.jsonl
@@ -639,23 +753,29 @@ function parseGeminiSessionFile(filePath: string): Session | null {
   const projectDir = path.dirname(chatsDir);
   const projectName = path.basename(projectDir);
 
+  // Resolve workspace info from projects.json
+  const workspaceInfo = resolveGeminiWorkspace(projectName);
+  const workspaceRootPath = workspaceInfo.workspaceRootPath;
+
   // Auto-detect format
   const format = detectFormat(records, filePath);
 
+  let session: Session | null = null;
   if (format === 'gemini-cli') {
-    return parseGeminiCliSessionFile(filePath, records, geminiSessionId, startTime, projectName);
+    session = parseGeminiCliSessionFile(filePath, records, geminiSessionId, startTime, projectName, workspaceRootPath);
+  } else if (format === 'code-assist') {
+    session = parseGeminiCodeAssistSessionFile(filePath, records, geminiSessionId, startTime, projectName, workspaceRootPath);
+  } else {
+    // Unknown format — try code-assist first (it was the original parser),
+    // then gemini-cli as fallback.
+    session = parseGeminiCodeAssistSessionFile(filePath, records, geminiSessionId, startTime, projectName, workspaceRootPath);
+    if (!session) {
+      session = parseGeminiCliSessionFile(filePath, records, geminiSessionId, startTime, projectName, workspaceRootPath);
+    }
   }
 
-  if (format === 'code-assist') {
-    return parseGeminiCodeAssistSessionFile(filePath, records, geminiSessionId, startTime, projectName);
-  }
-
-  // Unknown format — try code-assist first (it was the original parser),
-  // then gemini-cli as fallback.
-  const codeAssistResult = parseGeminiCodeAssistSessionFile(filePath, records, geminiSessionId, startTime, projectName);
-  if (codeAssistResult) return codeAssistResult;
-
-  return parseGeminiCliSessionFile(filePath, records, geminiSessionId, startTime, projectName);
+  if (!session) return null;
+  return { session, isSubagent };
 }
 
 /* ------------------------------------------------------------------ */
@@ -691,8 +811,88 @@ export function findGeminiDirs(): string[] {
 }
 
 /**
+ * Merge subagent sessions into their parent sessions.
+ *
+ * Gemini CLI sessions can have `kind: "subagent"` on the header record.
+ * Subagent sessions that share a sessionId with a parent are merged;
+ * orphans (subagents with no matching parent) become standalone sessions
+ * with a warning.
+ *
+ * @param sessions    All parsed sessions (will be modified in place)
+ * @param subagentIdxs  Indices into sessions[] that are subagents
+ */
+function mergeGeminiSubagents(sessions: Session[], subagentIdxs: number[]): void {
+  if (subagentIdxs.length === 0) return;
+
+  // Build parent index by sessionId (first non-subagent session wins)
+  const subagentSet = new Set(subagentIdxs);
+  const byId = new Map<string, Session>();
+  for (let i = 0; i < sessions.length; i++) {
+    if (!subagentSet.has(i) && !byId.has(sessions[i].sessionId)) {
+      byId.set(sessions[i].sessionId, sessions[i]);
+    }
+  }
+
+  // Track indices to remove after merge
+  const removeIdxs = new Set<number>();
+
+  for (const idx of subagentIdxs) {
+    const s = sessions[idx];
+    const parent = byId.get(s.sessionId);
+
+    if (parent && parent !== s) {
+      // Merge subagent requests into parent
+      for (const r of s.requests) parent.requests.push(r);
+      // Extend parent's timestamps
+      if (s.lastMessageDate &&
+          (!parent.lastMessageDate || s.lastMessageDate > parent.lastMessageDate)) {
+        parent.lastMessageDate = s.lastMessageDate;
+      }
+      if (s.creationDate &&
+          (!parent.creationDate || s.creationDate < parent.creationDate)) {
+        parent.creationDate = s.creationDate;
+      }
+      // Merge model usage
+      if (s.modelUsage) {
+        if (!parent.modelUsage) parent.modelUsage = {};
+        for (const [model, usage] of Object.entries(s.modelUsage)) {
+          if (!parent.modelUsage[model]) {
+            parent.modelUsage[model] = { ...usage };
+          } else {
+            parent.modelUsage[model].inputTokens += usage.inputTokens;
+            parent.modelUsage[model].outputTokens += usage.outputTokens;
+            parent.modelUsage[model].cacheReadTokens += usage.cacheReadTokens;
+            parent.modelUsage[model].cacheWriteTokens += usage.cacheWriteTokens;
+          }
+        }
+      }
+      removeIdxs.add(idx);
+    } else {
+      // Orphan subagent — keep as standalone
+      warnCore('parser-gemini', `Orphan subagent session (no parent found): ${s.sessionId}`);
+    }
+  }
+
+  // Re-sort merged parent requests and update requestCount
+  for (const s of byId.values()) {
+    if (s.requests.length > 1) {
+      s.requests.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+    }
+    s.requestCount = s.requests.length;
+  }
+
+  // Remove merged subagents from the array
+  if (removeIdxs.size > 0) {
+    const kept = sessions.filter((_, i) => !removeIdxs.has(i));
+    sessions.length = 0;
+    for (const s of kept) sessions.push(s);
+  }
+}
+
+/**
  * Parse all Gemini session files in a chats directory.
  * Auto-detects Gemini CLI vs Gemini Code Assist format per file.
+ * Performs subagent merging after parsing.
  * @param chatsDir Path to a Gemini chats directory (~/.gemini/tmp/<project>/chats/)
  * @returns Array of parsed sessions
  */
@@ -700,14 +900,21 @@ export function parseGeminiSessions(chatsDir: string): Session[] {
   if (!fs.existsSync(chatsDir)) return [];
 
   const sessions: Session[] = [];
+  const subagentIdxs: number[] = [];
+
   try {
     const files = fs.readdirSync(chatsDir);
     for (const file of files) {
       if (!file.endsWith('.jsonl')) continue;
       const filePath = path.join(chatsDir, file);
       try {
-        const session = parseGeminiSessionFile(filePath);
-        if (session) sessions.push(session);
+        const result = parseGeminiSessionFile(filePath);
+        if (result) {
+          if (result.isSubagent) {
+            subagentIdxs.push(sessions.length);
+          }
+          sessions.push(result.session);
+        }
       } catch {
         // Skip corrupted session files
       }
@@ -715,6 +922,56 @@ export function parseGeminiSessions(chatsDir: string): Session[] {
   } catch {
     // Permission or missing directory
   }
+
+  // Merge subagent sessions into their parents
+  mergeGeminiSubagents(sessions, subagentIdxs);
+
+  return sessions;
+}
+
+/**
+ * Async version of parseGeminiSessions. Parses all session files in a
+ * Gemini chats directory with async I/O to keep the event loop responsive.
+ * @param chatsDir Path to a Gemini chats directory (~/.gemini/tmp/<project>/chats/)
+ * @returns Array of parsed sessions
+ */
+export async function parseGeminiSessionsAsync(
+  chatsDir: string,
+  onFile?: (idx: number, total: number, name: string) => void,
+): Promise<Session[]> {
+  if (!fs.existsSync(chatsDir)) return [];
+
+  let files: string[];
+  try {
+    files = (await fs.promises.readdir(chatsDir)).filter(f => f.endsWith('.jsonl'));
+  } catch {
+    return [];
+  }
+
+  const sessions: Session[] = [];
+  const subagentIdxs: number[] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const filePath = path.join(chatsDir, file);
+    onFile?.(i + 1, files.length, file);
+    try {
+      const result = parseGeminiSessionFile(filePath);
+      if (result) {
+        if (result.isSubagent) {
+          subagentIdxs.push(sessions.length);
+        }
+        sessions.push(result.session);
+      }
+    } catch {
+      // Skip corrupted session files
+    }
+    // Yield every 5 files to keep the event loop responsive
+    if (i % 5 === 0) await new Promise<void>(r => setTimeout(r, 0));
+  }
+
+  // Merge subagent sessions into their parents
+  mergeGeminiSubagents(sessions, subagentIdxs);
 
   return sessions;
 }
