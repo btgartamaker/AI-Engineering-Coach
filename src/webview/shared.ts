@@ -347,6 +347,9 @@ export function createChart(
   data: { labels: (string | number)[]; datasets: Record<string, unknown>[] },
   options?: Record<string, unknown>,
 ): Chart {
+  // Destroy any existing chart on this canvas before creating a new one
+  destroyChartById(canvasId);
+
   const defaults: Record<string, unknown> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -388,7 +391,7 @@ export function scoreLabel(score: number, variant: 'dashboard' | 'antipatterns' 
   return 'Critical';
 }
 
-export function ringHtml(score: number, color: string, size: number): string {
+export function ringHtml(score: number, color: string, size: number): any {
   const r = (size - 6) / 2;
   const c = Math.PI * 2 * r;
   const offset = c - (score / 100) * c;
@@ -400,14 +403,14 @@ export function ringHtml(score: number, color: string, size: number): string {
       transform="rotate(-90 ${safeNumber(size / 2)} ${safeNumber(size / 2)})"/>
     <text x="${safeNumber(size / 2)}" y="${safeNumber(size / 2)}" text-anchor="middle" dominant-baseline="central"
       fill="${safeCssValue(color)}" font-size="${safeNumber(fontSize)}" font-weight="700">${safeNumber(score)}</text>
-  </svg>`.toString();
+  </svg>`;
 }
 
-export function pctBadge(pct: number, label: string): string {
-  if (pct === 0) return html`<span class="trend-badge trend-stable">${label} 0%</span>`.toString();
+export function pctBadge(pct: number, label: string): any {
+  if (pct === 0) return html`<span class="trend-badge trend-stable">${label} 0%</span>`;
   const cls = pct > 0 ? 'trend-improving' : 'trend-worsening';
   const sign = pct > 0 ? '+' : '';
-  return html`<span class="trend-badge ${safeCssClass(cls)}">${rawHtml(sign)}${safeNumber(pct)}% ${label}</span>`.toString();
+  return html`<span class="trend-badge ${safeCssClass(cls)}">${rawHtml(sign)}${safeNumber(pct)}% ${label}</span>`;
 }
 
 /* ---- Error Boundary ---- */
