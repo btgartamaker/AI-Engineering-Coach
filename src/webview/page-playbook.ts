@@ -17,6 +17,12 @@ const DIMMED_COLORS: Record<string, string> = {
   specificity: '#f0883e',
 };
 
+const WIN_IMPACT_ACCENTS: Record<string, string> = {
+  high: COLORS.red,
+  medium: COLORS.yellow,
+  low: COLORS.blue,
+};
+
 export function renderPlaybook(container: HTMLElement, filter: DateFilter): void {
   withErrorBoundary('Playbook', container, () => renderPlaybookAsync(container, filter));
 }
@@ -67,6 +73,10 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
     rpc<PracticePlanData>('getPracticePlan', { filter } as Record<string, unknown>).catch(() => null),
   ]);
 
+  const grade = data.overallGrade;
+  const gradeNum = gradeScore(grade);
+  const gradeCol = scoreColor(gradeNum);
+
   render(html`
     <div class="page-header">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -80,76 +90,72 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
           <span style="font-size:10px;opacity:0.7;" title="Hide API keys, tokens, passwords and other sensitive data shown in prompt examples.">ⓘ</span>
         </label>
       </div>
-      <p style="color:var(--text-muted);margin:8px 0 0 0;font-size:13px;">
+      <p class="page-subtitle">
         Personalized prompt patterns and improvements based on your data.
-        Your overall grade: <strong style="color:${scoreColor(gradeScore(data.overallGrade))}">${data.overallGrade}</strong>
+        Your overall grade: <strong style="color:${gradeCol}">${grade}</strong>
         · Weakest area: <strong>${data.weakestDimension}</strong>
       </p>
     </div>
 
-    <div class="playbook-layout" style="padding:0 16px 24px 16px;max-width:960px;">
+    <div class="pb-layout">
 
       <!-- Grade + Radar -->
-      <div style="display:flex;gap:16px;margin-bottom:20px;">
-        <div class="card" style="flex:0 0 180px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-          ${ringHtml(gradeScore(data.overallGrade), scoreColor(gradeScore(data.overallGrade)), 100)}
-          <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Overall Grade</div>
+      <div class="pb-hero">
+        <div class="pb-grade-card" style="--accent:${gradeCol}">
+          ${ringHtml(gradeNum, gradeCol, 100)}
+          <div class="pb-grade-label">Overall Grade</div>
         </div>
-        <div class="card" style="flex:1;padding:16px;">
+        <div class="pb-radar-card">
           <${CanvasEl} id="playbookRadarChart" height=${200} title="Prompt Dimensions" />
         </div>
       </div>
 
       <!-- Quick Wins -->
-      <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Quick Wins</h3>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="pb-card">
+        <h3 class="pb-section-title">Quick Wins</h3>
+        <div class="pb-wins">
           ${data.quickWins.map(qw => html`
-            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:6px;">
-              <span style="font-size:16px;flex-shrink:0;">${qw.impact === 'high' ? '\u{1F525}' : qw.impact === 'medium' ? '\u{1F4A1}' : '\u{1F4CC}'}</span>
-              <span style="flex:1;font-size:13px;">${qw.suggestion}</span>
-              <span style="font-size:11px;color:var(--text-muted);text-transform:capitalize;">${qw.impact}</span>
+            <div class="pb-win" style="--win-accent:${WIN_IMPACT_ACCENTS[qw.impact] || COLORS.blue}">
+              <span class="pb-win-icon">${qw.impact === 'high' ? '\u{1F525}' : qw.impact === 'medium' ? '\u{1F4A1}' : '\u{1F4CC}'}</span>
+              <span class="pb-win-text">${qw.suggestion}</span>
+              <span class="pb-win-impact">${qw.impact}</span>
             </div>
           `)}
         </div>
       </div>
 
       <!-- Trend -->
-      <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Prompt Maturity Trend</h3>
+      <div class="pb-card">
+        <h3 class="pb-section-title">Prompt Maturity Trend</h3>
         <${CanvasEl} id="playbookTrendChart" height=${160} title="Prompt Maturity Trend" />
-        ${data.weeklyTrend.labels.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough data for a trend yet. Keep coding!</p>` : ''}
+        ${data.weeklyTrend.labels.length === 0 ? html`<p class="pb-empty">Not enough data for a trend yet. Keep coding!</p>` : ''}
       </div>
 
       <!-- Before/After -->
-      <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Before &amp; After — Your Prompts, Improved</h3>
+      <div class="pb-card">
+        <h3 class="pb-section-title">Before &amp; After — Your Prompts, Improved</h3>
         ${data.personalExamples.length === 0
-          ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough prompt data to generate examples yet. Start prompting and check back!</p>`
-          : html`<div style="display:flex;flex-direction:column;gap:12px;">
+          ? html`<p class="pb-empty">Not enough prompt data to generate examples yet. Start prompting and check back!</p>`
+          : html`<div class="pb-list-col">
             ${data.personalExamples.map((ex, i) => playbookExampleCard(ex, i))}
           </div>`}
       </div>
 
       <!-- Pattern Library -->
-      <div class="card" style="padding:16px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Prompt Pattern Library</h3>
-        <p style="color:var(--text-muted);font-size:12px;margin:0 0 12px 0;">
-          Patterns relevant to your common work types. Hover for details.
-        </p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="pb-card">
+        <h3 class="pb-section-title">Prompt Pattern Library</h3>
+        <p class="pb-section-sub">Patterns relevant to your common work types. Click to expand.</p>
+        <div class="pb-list-col">
           ${data.relevantPatterns.map(p => playbookPatternCard(p))}
         </div>
       </div>
 
       <!-- Practice Exercises -->
       ${practiceData && practiceData.recommendedExercises.length > 0 ? html`
-      <div class="card" style="padding:16px;">
-        <h3 style="margin:0 0 8px 0;font-size:14px;">Practice Exercises</h3>
-        <p style="color:var(--text-muted);font-size:12px;margin:0 0 12px 0;">
-          Targeted exercises to strengthen your weakest skill areas.
-        </p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="pb-practice-card">
+        <h3 class="pb-section-title">Practice Exercises</h3>
+        <p class="pb-section-sub">Targeted exercises to strengthen your weakest skill areas.</p>
+        <div class="pb-list-col">
           ${practiceData.recommendedExercises.map(ex => practiceExerciseCard(ex))}
         </div>
       </div>
@@ -245,32 +251,28 @@ function renderTrendChart(data: PlaybookData): void {
 function playbookExampleCard(ex: PromptExample, idx: number): any {
   const dimColor = DIMMED_COLORS[ex.weakness] || '#8b949e';
   const savingsParts: string[] = [];
-  if (ex.tokenSavings != null) savingsParts.push(`~${ex.tokenSavings} tokens saved per prompt`);
-  if (ex.correctionSavings != null) savingsParts.push(`~${ex.correctionSavings} fewer correction turns`);
-  const savings = savingsParts.length > 0 ? savingsParts.join(' \u00B7 ') : '';
+  if (ex.tokenSavings != null && ex.tokenSavings > 0) savingsParts.push(`~${ex.tokenSavings} tokens saved per prompt`);
+  if (ex.correctionSavings != null && ex.correctionSavings > 0) savingsParts.push(`~${ex.correctionSavings} fewer correction turns`);
+  const savings = savingsParts.length > 0 ? savingsParts.join(' · ') : '';
 
   return html`
-    <details style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
-      <summary style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
-        background:rgba(255,255,255,0.02);user-select:none;">
-        <span style="font-size:13px;font-weight:500;flex:1;">Example ${idx + 1}</span>
-        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${dimColor}22;color:${dimColor};
-          border:1px solid ${dimColor}44;">${ex.weakness}</span>
+    <details class="pb-details">
+      <summary class="pb-details-summary">
+        <span class="pb-details-title">Example ${idx + 1}</span>
+        <span class="pb-details-badge" style="background:${dimColor}22;color:${dimColor};border:1px solid ${dimColor}44;">${ex.weakness}</span>
       </summary>
-      <div style="padding:12px 14px;">
-        <div style="margin-bottom:10px;">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Original prompt</div>
-          <pre style="margin:0;font-size:12px;line-height:1.5;color:var(--text-muted);
-            background:rgba(255,255,255,0.04);padding:8px;border-radius:4px;white-space:pre-wrap;">${ex.originalText}</pre>
-        </div>
-        <div style="margin-bottom:8px;">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Improved prompt</div>
-          <pre style="margin:0;font-size:12px;line-height:1.5;color:#e6edf3;
-            background:rgba(59,185,80,0.06);padding:8px;border-radius:4px;border-left:3px solid ${COLORS.green};white-space:pre-wrap;">${ex.improvedText}</pre>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
-          <span style="color:${COLORS.green};">${ex.improvementNote}</span>
-          ${savings ? html`<span style="color:var(--text-muted);font-size:11px;">${savings}</span>` : ''}
+      <div class="pb-details-body">
+        <div class="pb-details-body-inner">
+          <div class="pb-prompt-label">Original prompt</div>
+          <pre class="pb-prompt-pre">${ex.originalText}</pre>
+
+          <div class="pb-prompt-label">Improved prompt</div>
+          <pre class="pb-improved-pre">${ex.improvedText}</pre>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+            <span class="pb-improved-note">${ex.improvementNote}</span>
+            ${savings ? html`<span class="pb-saving-text">${savings}</span>` : ''}
+          </div>
         </div>
       </div>
     </details>
@@ -282,24 +284,19 @@ function playbookExampleCard(ex: PromptExample, idx: number): any {
 function playbookPatternCard(p: PromptPattern): any {
   const isUsed = !!p.userPromptExample && !p.userPromptExample.includes("You haven't used this pattern yet");
   return html`
-    <details style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
-      <summary style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
-        background:rgba(255,255,255,0.02);user-select:none;">
-        <span style="font-size:13px;font-weight:500;flex:1;">${p.name}</span>
-        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${COLORS.blue}22;color:${COLORS.blue};
-          border:1px solid ${COLORS.blue}44;">${p.technique}</span>
-        ${isUsed ? '' : html`<span style="font-size:10px;color:${COLORS.yellow};">New</span>`}
+    <details class="pb-details">
+      <summary class="pb-details-summary">
+        <span class="pb-details-title">${p.name}</span>
+        <span class="pb-details-badge" style="background:${COLORS.blue}22;color:${COLORS.blue};border:1px solid ${COLORS.blue}44;">${p.technique}</span>
+        ${isUsed ? '' : html`<span class="pb-details-new">New</span>`}
       </summary>
-      <div style="padding:12px 14px;">
-        <p style="margin:0 0 8px 0;font-size:12px;color:var(--text-muted);">${p.description}</p>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Applies to: ${p.appliesTo.join(', ')}</div>
-        ${p.technique ? html`
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Technique: ${p.technique}</div>
-        ` : ''}
-        <div style="margin-top:8px;">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Example:</div>
-          <pre style="margin:0;font-size:12px;line-height:1.5;color:#e6edf3;
-            background:rgba(255,255,255,0.04);padding:8px;border-radius:4px;white-space:pre-wrap;">${p.userPromptExample}</pre>
+      <div class="pb-details-body">
+        <div class="pb-details-body-inner">
+          <p class="pb-pattern-desc">${p.description}</p>
+          <div class="pb-pattern-meta">Applies to: ${p.appliesTo.join(', ')}</div>
+          ${p.technique ? html`<div class="pb-pattern-meta">Technique: ${p.technique}</div>` : ''}
+          <div class="pb-prompt-label" style="margin-top:8px;">Example:</div>
+          <pre class="pb-prompt-pre">${p.userPromptExample}</pre>
         </div>
       </div>
     </details>
@@ -309,35 +306,29 @@ function playbookPatternCard(p: PromptPattern): any {
 /* ── Practice Exercise Card ───────────────────────────────────────── */
 
 function practiceExerciseCard(ex: import('../core/types').PracticeExercise): any {
+  const diffColor = DIFFICULTY_COLORS[ex.difficulty];
+  const skillColor = (SKILL_COLORS as Record<string, string>)[ex.skillArea];
   return html`
-    <details style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
-      <summary style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
-        background:rgba(255,255,255,0.02);user-select:none;">
-        <span style="font-size:13px;font-weight:500;flex:1;">${ex.title}</span>
-        <span style="font-size:11px;padding:2px 8px;border-radius:10px;
-          background:${DIFFICULTY_COLORS[ex.difficulty]}22;color:${DIFFICULTY_COLORS[ex.difficulty]};
-          border:1px solid ${DIFFICULTY_COLORS[ex.difficulty]}44;">${ex.difficulty}</span>
-        <span style="font-size:11px;padding:2px 8px;border-radius:10px;
-          background:${(SKILL_COLORS as Record<string, string>)[ex.skillArea]}22;color:${(SKILL_COLORS as Record<string, string>)[ex.skillArea]};
-          border:1px solid ${(SKILL_COLORS as Record<string, string>)[ex.skillArea]}44;">${SKILL_LABELS[ex.skillArea]}</span>
-        <span style="font-size:11px;color:var(--text-muted);">${ex.estimatedMinutes}m</span>
+    <details class="pb-details">
+      <summary class="pb-details-summary">
+        <span class="pb-details-title">${ex.title}</span>
+        <span class="pb-details-badge" style="background:${diffColor}22;color:${diffColor};border:1px solid ${diffColor}44;">${ex.difficulty}</span>
+        <span class="pb-details-badge" style="background:${skillColor}22;color:${skillColor};border:1px solid ${skillColor}44;">${SKILL_LABELS[ex.skillArea]}</span>
+        <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${ex.estimatedMinutes}m</span>
       </summary>
-      <div style="padding:12px 14px;">
-        <p style="margin:0 0 8px 0;font-size:12px;color:var(--text-muted);">${ex.description}</p>
-        ${ex.impactStatement ? html`
-          <div style="margin-bottom:8px;padding:8px 10px;background:rgba(59,185,80,0.06);border-left:3px solid ${COLORS.green};border-radius:4px;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Why this matters:</div>
-            <div style="font-size:12px;color:${COLORS.green};">${ex.impactStatement}</div>
-          </div>
-        ` : ''}
-        <div style="margin-bottom:8px;">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Exercise:</div>
-          <pre style="margin:0;font-size:12px;line-height:1.5;color:#e6edf3;
-            background:rgba(255,255,255,0.04);padding:8px;border-radius:4px;white-space:pre-wrap;">${ex.exercisePrompt}</pre>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Success Criteria:</div>
-          <ul style="margin:0;padding-left:18px;font-size:12px;color:${COLORS.green};line-height:1.6;">
+      <div class="pb-details-body">
+        <div class="pb-details-body-inner">
+          <p class="pb-pattern-desc">${ex.description}</p>
+          ${ex.impactStatement ? html`
+            <div class="pb-practice-impact">
+              <div class="pb-practice-impact-label">Why this matters:</div>
+              <div class="pb-practice-impact-text">${ex.impactStatement}</div>
+            </div>
+          ` : ''}
+          <div class="pb-prompt-label">Exercise:</div>
+          <pre class="pb-prompt-pre">${ex.exercisePrompt}</pre>
+          <div class="pb-prompt-label">Success Criteria:</div>
+          <ul class="pb-criteria-list">
             ${ex.successCriteria.map(c => html`<li>${c}</li>`)}
           </ul>
         </div>
