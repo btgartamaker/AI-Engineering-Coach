@@ -1,3 +1,5 @@
+> **Fork notice**: This is a community fork of [microsoft/AI-Engineering-Coach](https://github.com/microsoft/AI-Engineering-Coach) with added support for **Pi** and **Gemini Code Assist** session analytics, harness-agnostic anti-patterns, and custom LLM provider configuration. Upstream changes are periodically merged. MIT License — copyright notices preserved below.
+
 <h1 align="center">AI Engineer Coach</h1>
 
 <p align="center">
@@ -199,8 +201,10 @@ Any use of third-party trademarks or logos are subject to those third-party's po
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — Copyright (c) Microsoft Corporation. All rights reserved.
+
+This fork is based on the original [microsoft/AI-Engineering-Coach](https://github.com/microsoft/AI-Engineering-Coach) and is distributed under the same MIT license. All modifications and additions are also provided under the MIT license.
 
 ## Disclaimer
 
-This project is an open-source community effort by Microsoft employees. It is **not** an official Microsoft product and is not part of any Microsoft service or support offering. It is provided as-is with no warranties or guarantees.
+The original project is an open-source community effort by Microsoft employees. This fork is independently maintained by community contributors. It is **not** an official Microsoft product and is not part of any Microsoft service or support offering. Provided as-is with no warranties or guarantees.
