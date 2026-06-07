@@ -6,7 +6,7 @@
 /* AI ROI Dashboard page (Spec 15) — cost estimation, time saved, model comparison */
 
 import type { DateFilter, ROIData } from '../core/types';
-import { rpc, createChart, COLORS, withErrorBoundary, formatNum } from './shared';
+import { rpc, createChart, destroyCharts, COLORS, withErrorBoundary, formatNum } from './shared';
 import { html, render } from './render';
 
 export function renderROI(container: HTMLElement, filter: DateFilter): void {
@@ -14,6 +14,7 @@ export function renderROI(container: HTMLElement, filter: DateFilter): void {
 }
 
 async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<void> {
+  destroyCharts();
   render(html`<div class="page-loading">Calculating ROI...</div>`, container);
 
   const data = await rpc<ROIData>('getROI', filter as Record<string, unknown>);

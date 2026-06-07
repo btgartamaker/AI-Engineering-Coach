@@ -6,7 +6,7 @@
 /* Deliberate Practice Plan page (Spec 16) */
 
 import type { DateFilter, PracticePlanData, SkillArea } from '../core/types';
-import { rpc, createChart, COLORS, scoreColor, ringHtml, withErrorBoundary } from './shared';
+import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary } from './shared';
 import { html, render } from './render';
 
 const SKILL_LABELS: Record<SkillArea, string> = {
@@ -48,6 +48,7 @@ export function renderPractice(container: HTMLElement, filter: DateFilter): void
 }
 
 async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<void> {
+  destroyCharts();
   render(html`<div class="page-loading">Building your practice plan...</div>`, container);
 
   // Load anti-pattern data for skill assessment

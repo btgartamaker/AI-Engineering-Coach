@@ -10,7 +10,7 @@
  */
 
 import { DateFilter, CorrectionAnalysisData, CorrectionCategory } from '../core/types';
-import { rpc, createChart, formatNum, COLORS } from './shared';
+import { rpc, createChart, destroyCharts, formatNum, COLORS } from './shared';
 import { html, render, CanvasEl } from './render';
 
 const CATEGORY_LABELS: Record<CorrectionCategory, string> = {
@@ -37,6 +37,7 @@ const CATEGORY_COLORS: Record<CorrectionCategory, string> = {
 let redactEnabled = true;
 
 export async function renderCorrections(container: HTMLElement, currentFilter: DateFilter): Promise<void> {
+  destroyCharts();
   render(html`<div class="loading-screen"><div class="loading-spinner"></div><div class="loading-text">Analyzing correction patterns\u2026</div></div>`, container);
 
   let data: CorrectionAnalysisData;

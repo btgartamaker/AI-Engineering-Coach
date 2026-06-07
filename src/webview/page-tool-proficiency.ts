@@ -6,7 +6,7 @@
 /* Tool Proficiency Score page (Spec 14) */
 
 import type { DateFilter, ToolProficiencyData } from '../core/types';
-import { rpc, createChart, COLORS, scoreColor, ringHtml, withErrorBoundary, formatNum } from './shared';
+import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary, formatNum } from './shared';
 import { html, render } from './render';
 
 const GROUP_LABELS: Record<string, string> = {
@@ -32,6 +32,7 @@ export function renderToolProficiency(container: HTMLElement, filter: DateFilter
 }
 
 async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<void> {
+  destroyCharts();
   render(html`<div class="page-loading">Loading tool proficiency...</div>`, container);
 
   const data = await rpc<ToolProficiencyData>('getToolProficiency', filter as Record<string, unknown>);

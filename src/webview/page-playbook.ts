@@ -6,7 +6,7 @@
 /* Prompt Engineering Playbook page (Spec 12) */
 
 import type { DateFilter, PlaybookData, PromptExample, PromptPattern } from '../core/types';
-import { rpc, createChart, COLORS, scoreColor, ringHtml, withErrorBoundary } from './shared';
+import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary } from './shared';
 import { html, render } from './render';
 
 const DIMMED_COLORS: Record<string, string> = {
@@ -25,6 +25,7 @@ export function renderPlaybook(container: HTMLElement, filter: DateFilter): void
 let redactEnabled = true;
 
 async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): Promise<void> {
+  destroyCharts();
   render(html`<div class="page-loading">Loading your prompt playbook...</div>`, container);
 
   const data = await rpc<PlaybookData>('getPlaybook', { ...filter, redact: redactEnabled } as Record<string, unknown>);
