@@ -102,7 +102,7 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
       <!-- Grade + Radar -->
       <div class="pb-hero">
         <div class="pb-grade-card" style="--accent:${gradeCol}">
-          ${ringHtml(gradeNum, gradeCol, 100)}
+          <div style="font-size:42px;font-weight:800;color:${gradeCol};line-height:1;">${grade}</div>
           <div class="pb-grade-label">Overall Grade</div>
         </div>
         <div class="pb-radar-card">
@@ -133,7 +133,7 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
 
       <!-- Before/After -->
       <div class="pb-card">
-        <h3 class="pb-section-title">Before &amp; After — Your Prompts, Improved</h3>
+        <h3 class="pb-section-title">Before & After — Your Prompts, Improved</h3>
         ${data.personalExamples.length === 0
           ? html`<p class="pb-empty">Not enough prompt data to generate examples yet. Start prompting and check back!</p>`
           : html`<div class="pb-list-col">

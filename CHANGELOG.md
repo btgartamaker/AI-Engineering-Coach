@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.14 — Playbook & Skills Page UI Polish + Human-in-the-Loop Reframe
+
+- **Playbook UI cleanup**: extracted ~150 lines of inline styles into dedicated `.pb-*` CSS classes
+  - Stat cards with colored left-border accents (green/yellow/red based on grade)
+  - Responsive hero row (grade ring + radar) stacks vertically below 700px
+  - Quick wins with colored left-border accents based on impact severity
+  - Smooth expand/collapse animations on Before/After, Pattern, and Practice cards via CSS grid transition
+  - Consistent `.pb-card` wrapper with proper borders, backgrounds, and radius
+  - Improved prompt blocks use green accent border; original prompts use muted styling
+- **Tool Proficiency UI cleanup**: extracted inline styles to `.tp-*` CSS classes
+  - Score card with colored left-border accent
+  - Responsive hero layout
+  - Smooth expand/collapse for blind spot details
+  - Growth stat cells with color-coded values
+- **Skill Finder human-in-the-loop reframe**:
+  - Renamed "Custom Skill Opportunities" → "Recurring Patterns"
+  - Replaced "Install Skill" primary button with "View Examples" expand/collapse (shows repeated prompt examples inline)
+  - Moved skill generation to a secondary "Generate Skill" button
+  - Removed dismiss buttons (coaching insights shouldn't be dismissable)
+  - Community catalog section is now collapsed by default behind a `<details>` element
+  - Examples are no longer truncated with ellipsis; they wrap naturally with `pre-wrap`
+  - Renamed action button from "Analyze" → "Find Patterns"
+
 ## 0.2.13 — Corrections Page UI Polish
 
 - **Visual hierarchy**: stat cards now have colored left-border accents (green/yellow/red based on correction-rate severity) and improved typography
