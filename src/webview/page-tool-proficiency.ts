@@ -79,7 +79,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
             <strong>search</strong>: finding relevant code
           </span>
         </p>
-        <${CanvasEl} id="toolGroupChart" height=${220} title="Tool Usage by Group" />
+        <${CanvasEl} id="toolGroupChart" height=${220} title="Skill Areas" />
       </div>
 
       <!-- Blind spots -->
@@ -111,44 +111,31 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
           </div>`}
       </div>
 
-      <!-- Tool usage table -->
-      <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Tool Breakdown</h3>
-        <table style="width:100%;font-size:12px;border-collapse:collapse;">
-          <thead>
-            <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
-              <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:500;">Tool</th>
-              <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500;">Calls</th>
-              <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500;">Sessions</th>
-              <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500;">Avg Tokens/Call</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.toolsUsed.map(t => html`
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                <td style="padding:6px 8px;">${t.toolName}</td>
-                <td style="padding:6px 8px;text-align:right;">${formatNum(t.callCount)}</td>
-                <td style="padding:6px 8px;text-align:right;">${t.uniqueSessions}</td>
-                <td style="padding:6px 8px;text-align:right;">${t.avgTokensPerCall.toLocaleString()}</td>
-              </tr>
-            `)}
-          </tbody>
-        </table>
-        ${data.toolsUsed.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">No tool data available yet.</p>` : ''}
-      </div>
-
-      <!-- Weekly Trend -->
+      <!-- Growth summary -->
       <div class="card" style="padding:16px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Skill Trend</h3>
-        <${CanvasEl} id="toolTrendChart" height=${160} title="Proficiency Trend" />
-        ${data.weeklyTrend.labels.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough data for a trend yet.</p>` : ''}
+        <h3 style="margin:0 0 12px 0;font-size:14px;">Skill Growth</h3>
+        ${data.weeklyTrend.labels.length >= 2
+          ? html`<div style="display:flex;gap:16px;font-size:13px;">
+              <div style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
+                <div style="font-size:24px;font-weight:600;color:${COLORS.blue};">${data.groups.filter(g => g.gap >= 0).length}/${data.groups.length}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Skills at or above benchmark</div>
+              </div>
+              <div style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
+                <div style="font-size:24px;font-weight:600;color:${COLORS.green};">${data.toolsUsed.length}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Different tools used</div>
+              </div>
+              <div style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
+                <div style="font-size:24px;font-weight:600;color:${COLORS.yellow};">${data.blindSpots.length}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Blind spots to explore</div>
+              </div>
+            </div>`
+          : html`<p style="color:var(--text-muted);font-size:13px;">Not enough data yet. Keep using AI tools and check back for growth trends.</p>`}
       </div>
 
     </div>
   `, container);
 
   renderGroupChart(data);
-  renderTrendChart(data);
 }
 
 /* ── Group Chart (bar) ────────────────────────────────────────────── */
@@ -194,26 +181,4 @@ function renderGroupChart(data: ToolProficiencyData): void {
 
 /* ── Trend Chart ──────────────────────────────────────────────────── */
 
-function renderTrendChart(data: ToolProficiencyData): void {
-  if (data.weeklyTrend.labels.length === 0) return;
-  createChart('toolTrendChart', 'line', {
-    labels: data.weeklyTrend.labels,
-    datasets: [{
-      label: 'Proficiency Score',
-      data: data.weeklyTrend.score,
-      borderColor: COLORS.green,
-      backgroundColor: COLORS.green + '20',
-      fill: true,
-      tension: 0.3,
-      pointRadius: 3,
-    }],
-  }, {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { min: 0, max: 100, ticks: { font: { size: 10 } } },
-      x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
-    },
-  });
-}
+
