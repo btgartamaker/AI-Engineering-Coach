@@ -5,7 +5,7 @@
 
 /* Dashboard page renderer */
 
-import { DateFilter, DailyActivity, PRACTICE_GROUPS, AntiPatternData, WorkflowOptimizationData, SkillTriageResult, CatalogDiscoverResult, CatalogTriageResult, GroupScore, CodeProductionData } from '../core/types';
+import { DateFilter, DailyActivity, PRACTICE_GROUPS, AntiPatternData, WorkflowOptimizationData, SkillTriageResult, CatalogDiscoverResult, CatalogTriageResult, GroupScore, CodeProductionData, CorrectionAnalysisData } from '../core/types';
 import { FF_TOKEN_REPORTING_ENABLED } from '../core/constants';
 import { rpc, rpcAllSettled, createChart, formatNum, COLORS, PALETTE, harnessColor, destroyChartById, scoreColor, scoreLabel } from './shared';
 import { html, render, CanvasEl, ScoreRing, PctBadge } from './render';
@@ -126,6 +126,7 @@ function renderDashboardMarkup(
     </div>
     ${!FF_TOKEN_REPORTING_ENABLED && html`<div class="dash-info-banner"><span class="dash-info-icon">\u2139</span><div><strong>Token Usage & Burndown temporarily hidden</strong><p>These features are disabled until we can verify that reported numbers align with GitHub's billing data. They will be re-enabled once validated.</p></div></div>`}
     ${scores.length > 0 && html`<section class="dash-section"><div class="dash-section-header"><h3>Anti-Patterns Summary</h3><a href="#" data-page="anti-patterns" style=${'font-size:12px;color:' + COLORS.blue + ';text-decoration:none;'}>View All Anti-Patterns \u2192</a></div><div class="ap-score-grid">${scores.map(g => html`<${PracticeCard} g=${g} />`)}</div></section>`}
+    <section class="dash-section"><div class="dash-section-header"><h3>Wasted Effort</h3><a href="#" data-page="corrections" style=${'font-size:12px;color:' + COLORS.blue + ';text-decoration:none;'}>View Details \u2192</a></div><p class="dash-section-desc">Back-and-forth correction loops that waste tokens and time.</p><div id="dashCorrectionContent" class="dash-card"><div style="text-align:center;color:var(--text-muted);font-size:13px;">Loading\u2026</div></div></section>
     <section class="dash-section"><div class="dash-section-header"><h3>Skill Finder</h3><a href="#" data-page="skills" style=${'font-size:12px;color:' + COLORS.blue + ';text-decoration:none;'}>Open Full View \u2192</a></div><p class="dash-section-desc">Scans your prompt history for repeated patterns that waste time re-explaining the same tasks.</p><div id="dashSkillContent" class="dash-card">${!skillCache && html`<div style="text-align:center;"><p style="color:var(--text-muted);margin:0 0 12px 0;font-size:13px;">Analyze your prompt history to discover skill opportunities.</p><button id="dashScanBtn" class="dash-scan-btn">Scan for Skills</button></div>`}</div></section>
     <section class="dash-section"><div style="display:flex;align-items:baseline;gap:16px;margin-bottom:8px;flex-wrap:wrap;"><h3 style="margin:0;">Daily Activity</h3><div id="activityTabs" class="dash-tabs"><button class=${'dash-tab' + (activeMetric === 'requests' ? ' dash-tab-active' : '')} data-metric="requests">Requests <strong>${formatNum(totalReqs)}</strong></button><button class=${'dash-tab' + (activeMetric === 'sessions' ? ' dash-tab-active' : '')} data-metric="sessions">Sessions <strong>${formatNum(totalSessions)}</strong></button><button class=${'dash-tab' + (activeMetric === 'loc' ? ' dash-tab-active' : '')} data-metric="loc">LoC <strong>${formatNum(totalLoc)}</strong></button><button class=${'dash-tab' + (activeMetric === 'workspaces' ? ' dash-tab-active' : '')} data-metric="workspaces">Workspaces <strong>${formatNum(stats.totalWorkspaces)}</strong></button></div></div><${CanvasEl} id="dailyChart" height=${160} /></section>
     <div class="two-col" style="margin-bottom:16px;"><${CanvasEl} id="wsChart" height=${140} title="Top Workspaces by Requests" /><${CanvasEl} id="harnessChart" height=${140} title="Requests by Harness" /></div>
@@ -307,6 +308,40 @@ export async function renderDashboard(container: HTMLElement, currentFilter: Dat
 
   renderWorkspaceCharts(wsBreakdown, harnessBreakdown);
   renderDashboardSkillFinder(skillCache, currentFilter);
+
+  // Load correction data for the Wasted Effort card
+  void loadDashCorrections(currentFilter);
+}
+
+/* ── Corrections card ──────────────────────────────────────────────── */
+
+async function loadDashCorrections(filter: DateFilter): Promise<void> {
+  const el = document.getElementById('dashCorrectionContent');
+  if (!el) return;
+  try {
+    const data = await rpc<CorrectionAnalysisData>('getCorrections', filter as Record<string, unknown>);
+    render(html`
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+        <div style="text-align:center;flex:1;min-width:80px;">
+          <div style="font-size:28px;font-weight:600;color:${data.correctionRate > 0.15 ? COLORS.red : data.correctionRate > 0.08 ? COLORS.yellow : COLORS.green};">${(data.correctionRate * 100).toFixed(1)}%</div>
+          <div style="font-size:11px;color:var(--text-muted);">Correction Rate</div>
+        </div>
+        <div style="text-align:center;flex:1;min-width:80px;">
+          <div style="font-size:28px;font-weight:600;">${formatNum(data.wastedTokens)}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Tokens Wasted</div>
+        </div>
+        <div style="text-align:center;flex:1;min-width:80px;">
+          <div style="font-size:28px;font-weight:600;">$${data.wastedCost.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Est. Cost</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center;">
+        ${data.totalCorrectionTurns} correction ${data.totalCorrectionTurns === 1 ? 'turn' : 'turns'} detected
+      </div>
+    `, el);
+  } catch {
+    render(html`<div style="text-align:center;color:var(--text-muted);font-size:13px;">Could not load correction data.</div>`, el);
+  }
 }
 
 /* ── Skill results rendering ──────────────────────────────────────── */

@@ -46,7 +46,7 @@ import type {
   TokenCoverageData,
   WorkspaceBreakdown,
   WorkLifeBalanceResult,
-  WorkflowOptimizationData,
+  WorkflowOptimizationData, CorrectionAnalysisData,
 } from './analytics-types';
 import type { ConfigHealthData } from './config-types';
 import type { InsightsData } from './insights-types';
@@ -86,6 +86,7 @@ export interface RpcMethodMap {
   getContextRangeAvailability: { params: { filter?: DateFilter } | undefined; result: { rangesWithTokens: number[]; matchingSessions: number; sessionsWithRequestTokens: number; harnessesWithoutRequestTokens: string[] } };
   getCalendarActivity: { params: DateFilter | undefined; result: CalendarActivityData };
   getProjectOverview: { params: DateFilter | undefined; result: ProjectOverviewData };
+  getCorrections: { params: DateFilter | undefined; result: CorrectionAnalysisData };
   getImageGallery: { params: DateFilter | undefined; result: ImageGalleryData };
   getSessionImages: { params: { sessionId: string; requestId: string }; result: { images: string[] } };
   getRuleEditor: { params: DateFilter | Record<string, unknown>; result: unknown };

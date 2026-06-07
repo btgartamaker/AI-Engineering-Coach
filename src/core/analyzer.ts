@@ -13,7 +13,7 @@ import {
   AntiPatternData, WorkLifeBalanceResult, StatsResult, HarnessComparisonData,
   WorkflowOptimizationData, ConfigHealthData, FlowStateData, Workspace,
   CalendarActivityData, ProjectOverviewData, ContextManagementData, InsightsData,
-  ParserCoverageData, ParserPreviewData,
+  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData,
 } from './types';
 import { DashboardAnalyzer } from './analyzer-dashboard';
 import { ProductionAnalyzer } from './analyzer-production';
@@ -25,6 +25,7 @@ import { ConfigAnalyzer } from './analyzer-config';
 import { FlowAnalyzer } from './analyzer-flow';
 import { ContextAnalyzer } from './analyzer-context';
 import { InsightsAnalyzer } from './analyzer-insights';
+import { CorrectionsAnalyzer } from './analyzer-corrections';
 import { ImageAnalyzer, ImageGalleryData } from './analyzer-images';
 import { AnalyzerBase } from './analyzer-base';
 import { errorCore, infoCore, warnCore } from './log';
@@ -40,6 +41,7 @@ export class Analyzer {
   private readonly insights: InsightsAnalyzer;
   private readonly flow: FlowAnalyzer;
   private readonly context: ContextAnalyzer;
+  private readonly corrections: CorrectionsAnalyzer;
   private readonly images: ImageAnalyzer;
   private readonly sessions: Session[];
   private readonly editLocIndex: Map<string, Map<string, number>>;
@@ -62,6 +64,7 @@ export class Analyzer {
     this.insights = new InsightsAnalyzer(sessions, elIdx, sharedMap);
     this.flow = new FlowAnalyzer(sessions, elIdx, sharedMap);
     this.context = new ContextAnalyzer(sessions, elIdx, sharedMap);
+    this.corrections = new CorrectionsAnalyzer(sessions, elIdx, sharedMap);
     this.images = new ImageAnalyzer(sessions, elIdx, sharedMap);
   }
 
@@ -246,6 +249,10 @@ export class Analyzer {
   }
 
   getCalendarActivity(f?: DateFilter): CalendarActivityData { return this.dashboard.getCalendarActivity(f); }
+
+  getCorrections(filter?: DateFilter): CorrectionAnalysisData {
+    return this.corrections.analyze(filter);
+  }
 
   getImageGallery(f?: DateFilter): ImageGalleryData { return this.images.getImageGallery(f); }
 

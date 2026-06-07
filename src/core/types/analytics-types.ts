@@ -587,6 +587,41 @@ export interface AntiPatternData {
   weeklyScores: { labels: string[]; series: { group: PracticeGroup; scores: number[] }[] };
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Correction Turn & Error Analysis (Spec 11)
+   ═══════════════════════════════════════════════════════════════════ */
+
+export type CorrectionCategory =
+  | 'output-quality'
+  | 'misalignment'
+  | 'missing-context'
+  | 'syntax-error'
+  | 'scope-creep'
+  | 'tool-misfire'
+  | 'unknown';
+
+export interface CorrectionTurn {
+  sessionId: string;
+  requestIndex: number;
+  correctionCount: number;
+  category: CorrectionCategory;
+  wastedTokens: number;
+  originalRequest: string;
+  correctionRequests: string[];
+  firstResponseSnippet: string;
+}
+
+export interface CorrectionAnalysisData {
+  totalCorrectionTurns: number;
+  correctionRate: number;
+  wastedTokens: number;
+  wastedCost: number;
+  byCategory: Record<CorrectionCategory, number>;
+  topCorrectionTriggers: { pattern: string; count: number }[];
+  weeklyTrend: { labels: string[]; correctionRate: number[] };
+  recentCorrections: CorrectionTurn[];
+}
+
 export interface WorkLifeBalanceResult {
   score: number;
   totalRequests: number;
