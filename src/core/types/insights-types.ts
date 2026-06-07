@@ -112,6 +112,8 @@ export interface PracticeExercise {
   exercisePrompt: string;
   successCriteria: string[];
   estimatedMinutes: number;
+  /** Short statement explaining the real-world benefit of this exercise */
+  impactStatement?: string;
 }
 
 export interface PracticePlanData {

@@ -140,10 +140,14 @@ function renderExerciseCard(ex: import('../core/types').PracticeExercise): any {
       </summary>
       <div style="padding:12px 14px;">
         <p style="margin:0 0 10px 0;font-size:12px;color:var(--text-muted);">${ex.description}</p>
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:8px;">
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Exercise:</div>
           <pre style="margin:0;font-size:12px;line-height:1.5;color:#e6edf3;
             background:rgba(255,255,255,0.04);padding:10px;border-radius:4px;white-space:pre-wrap;">${ex.exercisePrompt}</pre>
+        </div>
+        <div style="margin-bottom:8px;padding:8px 10px;background:rgba(59,185,80,0.06);border-left:3px solid ${COLORS.green};border-radius:4px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Why this matters:</div>
+          <div style="font-size:12px;color:${COLORS.green};">${ex.impactStatement || 'Strengthens this skill area over time'}</div>
         </div>
         <div>
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Success Criteria:</div>

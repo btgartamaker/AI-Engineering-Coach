@@ -42,6 +42,7 @@ const EXERCISES: PracticeExercise[] = [
       'References specific files or components if applicable',
     ],
     estimatedMinutes: 3,
+    impactStatement: 'Structured prompts reduce correction loops by ~30% — the model understands exactly what you want.',
   },
   {
     id: 'spec-explicit', skillArea: 'prompt-specificity', difficulty: 'intermediate',
@@ -55,6 +56,7 @@ const EXERCISES: PracticeExercise[] = [
       'Specifies error handling approach',
     ],
     estimatedMinutes: 5,
+    impactStatement: 'Adding success criteria upfront cuts iterations in half — the model self-checks before outputting.',
   },
   // Constraint-writing
   {
@@ -68,6 +70,7 @@ const EXERCISES: PracticeExercise[] = [
       'Sets a scope boundary (what NOT to implement)',
     ],
     estimatedMinutes: 3,
+    impactStatement: 'Without boundaries, AI tends to over-engineer — constraints save you cleanup time.',
   },
   {
     id: 'const-tech', skillArea: 'constraint-writing', difficulty: 'intermediate',
@@ -81,6 +84,7 @@ const EXERCISES: PracticeExercise[] = [
       'Defines performance constraints if applicable',
     ],
     estimatedMinutes: 5,
+    impactStatement: 'Technology constraints prevent unwanted dependencies that cause tech debt.',
   },
   // Context-provision
   {
@@ -94,6 +98,7 @@ const EXERCISES: PracticeExercise[] = [
       'Indicates which file to focus on for changes',
     ],
     estimatedMinutes: 3,
+    impactStatement: 'File references give the AI precise context — it won\'t guess which file you mean.',
   },
   {
     id: 'ctx-full', skillArea: 'context-provision', difficulty: 'advanced',
@@ -107,6 +112,7 @@ const EXERCISES: PracticeExercise[] = [
       'Total prompt is 100-300 words',
     ],
     estimatedMinutes: 7,
+    impactStatement: 'Mastering the context sandwich reduces corrections by teaching the AI the full picture upfront.',
   },
   // Tool-selection
   {
@@ -120,6 +126,7 @@ const EXERCISES: PracticeExercise[] = [
       'Prompt avoids asking for changes in step 1',
     ],
     estimatedMinutes: 4,
+    impactStatement: 'Reading first prevents incorrect changes — you can\'t fix what you don\'t understand.',
   },
   {
     id: 'tool-grep-first', skillArea: 'tool-selection', difficulty: 'intermediate',
@@ -132,6 +139,7 @@ const EXERCISES: PracticeExercise[] = [
       'Third prompt executes with precise edits',
     ],
     estimatedMinutes: 5,
+    impactStatement: 'Searching before editing prevents breaking existing usages — the AI can\'t see what it doesn\'t read.',
   },
   // Session-hygiene
   {
@@ -145,6 +153,7 @@ const EXERCISES: PracticeExercise[] = [
       'References the API contract established in the previous session',
     ],
     estimatedMinutes: 4,
+    impactStatement: 'Long sessions lose context — splitting keeps the AI focused and reduces repetition.',
   },
   {
     id: 'hygiene-compact', skillArea: 'session-hygiene', difficulty: 'advanced',
@@ -158,6 +167,7 @@ const EXERCISES: PracticeExercise[] = [
       'Is self-contained (new AI could read it and continue)',
     ],
     estimatedMinutes: 6,
+    impactStatement: 'A good summary saves 10+ minutes of re-explaining every time you start fresh.',
   },
   // Error-recovery
   {
@@ -171,6 +181,7 @@ const EXERCISES: PracticeExercise[] = [
       'States clearly what the correct behavior should be',
     ],
     estimatedMinutes: 3,
+    impactStatement: 'Vague error reports lead to wrong fixes — specific error info gets the right fix faster.',
   },
   {
     id: 'recovery-root-cause', skillArea: 'error-recovery', difficulty: 'intermediate',
@@ -183,6 +194,7 @@ const EXERCISES: PracticeExercise[] = [
       'Prompt structure ensures fix is informed by root cause',
     ],
     estimatedMinutes: 5,
+    impactStatement: 'Root cause diagnosis prevents treating symptoms — the fix actually sticks.',
   },
   // Task-decomposition
   {
@@ -197,6 +209,7 @@ const EXERCISES: PracticeExercise[] = [
       'No single prompt is too broad',
     ],
     estimatedMinutes: 4,
+    impactStatement: 'Breaking large tasks into smaller prompts gives better results for each piece.',
   },
 ];
 
