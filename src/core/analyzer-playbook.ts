@@ -384,8 +384,8 @@ export class PlaybookAnalyzer extends AnalyzerBase {
       const improvement = improvePrompt(g.request.messageText, g.score.issues, g.request.referencedFiles.length > 0);
       const weakDim = findWeakness(g.score);
       return {
-        originalText: g.request.messageText.substring(0, 300),
-        improvedText: improvement.improved.substring(0, 500),
+        originalText: g.request.messageText.substring(0, 1000),
+        improvedText: improvement.improved.substring(0, 2000),
         weakness: weakDim,
         improvementNote: improvement.note,
         tokenSavings: g.score.total < 40 ? Math.round(Math.random() * 200 + 50) : undefined,
