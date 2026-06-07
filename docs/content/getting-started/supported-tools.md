@@ -38,6 +38,23 @@ Parses session logs from the open-source OpenCode terminal tool that supports mu
 
 Reads Copilot Chat conversation logs from Apple's Xcode IDE. Sessions are parsed from SQLite databases stored in the GitHub Copilot configuration directory.
 
+## Gemini Code Assist
+
+Parses session files from Google's Gemini Code Assist VS Code extension. Sessions are stored at `~/.gemini/tmp/<project>/chats/` and capture every request, response, tool call, and file reference.
+
+## Gemini CLI
+
+Parses session files from Google's standalone [Gemini CLI](https://github.com/google-gemini/gemini-cli) terminal agent. Sessions are read from the same `~/.gemini/tmp/<project>/chats/` directory as Gemini Code Assist, using automatic format detection. The parser extracts per-message token counts, model selection, structured tool calls with status, reasoning/thinking blocks, and session-level per-model token totals.
+
+**What is tracked:**
+- Requests and responses with timestamps
+- Model selection (e.g., `gemini-2.5-pro`, `gemini-3-pro`)
+- Tool calls with success/error status and file paths
+- Token usage (input, output, cached) per request
+- Reasoning / thinking blocks
+- File context references
+- Session-level per-model token totals
+
 ## GitHub Copilot CLI
 
 Parses session state and history files from the GitHub Copilot CLI terminal agent. Captures prompts, completions, model usage, and per-model token metrics reported at session shutdown.

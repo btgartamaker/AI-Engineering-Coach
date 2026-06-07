@@ -73,7 +73,7 @@ const EXTERNAL_HARNESSES: ExternalHarnessCollector[] = [
     },
   },
   {
-    name: 'Gemini Code Assist',
+    name: 'Gemini',
     collectSync(ctx) {
       for (const chatsDir of findGeminiDirs()) {
         for (const session of parseGeminiSessions(chatsDir)) {
@@ -139,7 +139,8 @@ export const EXTERNAL_HARNESS_SET = new Set<string>([
   'Codex',
   'OpenCode',
   'pi',
-  'Gemini',
+  'Gemini Code Assist',
+  'Gemini CLI',
 ]);
 
 export async function collectExternalHarnessesAsync(

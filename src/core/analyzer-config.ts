@@ -89,7 +89,7 @@ export class ConfigAnalyzer extends AnalyzerBase {
     // External harnesses (Claude, Pi, Codex, OpenCode) use real project dirs,
     // so all of them are meaningful. VS Code workspace storage can have hundreds
     // of small/transient workspaces, so we require at least 50 requests there.
-    if (activity?.harness === 'Claude' || activity?.harness === 'pi' || activity?.harness === 'Codex' || activity?.harness === 'OpenCode' || activity?.harness === 'Gemini') {
+    if (activity?.harness === 'Claude' || activity?.harness === 'pi' || activity?.harness === 'Codex' || activity?.harness === 'OpenCode' || activity?.harness === 'Gemini Code Assist' || activity?.harness === 'Gemini CLI') {
       return false;
     }
     return !!activity && activity.requestCount < 50;
@@ -338,7 +338,9 @@ export class ConfigAnalyzer extends AnalyzerBase {
           switch (harness) {
             case 'Claude': return '@file';
             case 'pi': return '@file';
-            case 'Gemini': return '#file';
+            case 'Gemini Code Assist':
+            case 'Gemini CLI':
+              return '#file';
             case 'Codex': return '@file or #file';
             default: return '#file';
           }

@@ -32,7 +32,7 @@ vi.mock('./parser-gemini', () => ({
 vi.mock('./parser-harnesses', () => ({
   collectExternalHarnessesSync: vi.fn(),
   collectExternalHarnessesAsync: vi.fn(() => Promise.resolve()),
-  EXTERNAL_HARNESS_SET: new Set(['Claude', 'Codex', 'OpenCode', 'pi', 'Gemini']),
+  EXTERNAL_HARNESS_SET: new Set(['Claude', 'Codex', 'OpenCode', 'pi', 'Gemini Code Assist', 'Gemini CLI']),
 }));
 
 vi.mock('./cache', () => ({

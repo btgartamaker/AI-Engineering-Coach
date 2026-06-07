@@ -443,7 +443,9 @@ function harnessInstructionFile(harness?: string): string {
   switch (harness) {
     case 'Claude': return 'CLAUDE.md';
     case 'pi': return 'AGENTS.md';
-    case 'Gemini': return '.gemini/settings.json';
+    case 'Gemini Code Assist':
+    case 'Gemini CLI':
+      return '.gemini/settings.json';
     case 'Codex': return 'SPEC.md';
     case 'OpenCode': return '.instructions.md';
     default: return '.github/copilot-instructions.md';
@@ -455,7 +457,8 @@ function harnessDisplayName(harness?: string): string {
   switch (harness) {
     case 'Claude': return 'Claude Code';
     case 'pi': return 'Pi';
-    case 'Gemini': return 'Gemini Code Assist';
+    case 'Gemini Code Assist': return 'Gemini Code Assist';
+    case 'Gemini CLI': return 'Gemini CLI';
     case 'Codex': return 'Codex CLI';
     case 'OpenCode': return 'OpenCode';
     default: return 'GitHub Copilot';
@@ -478,8 +481,8 @@ export function generateWorkspaceSuggestions(
       suggestions.push('Create an AGENTS.md file with project conventions -- this is the single most impactful context file for Pi.');
     } else if (harness === 'Claude') {
       suggestions.push('Create a CLAUDE.md file with project conventions -- this is the single most impactful context file for Claude Code.');
-    } else if (harness === 'Gemini') {
-      suggestions.push('Add a .gemini/settings.json file with project instructions -- this is the single most impactful context file for Gemini Code Assist.');
+    } else if (harness === 'Gemini Code Assist' || harness === 'Gemini CLI') {
+      suggestions.push('Add a .gemini/settings.json file with project instructions -- this is the single most impactful context file for Gemini.');
     } else {
       suggestions.push(`Create a ${instrFile} file with project conventions -- this is the single most impactful context file for ${displayName}.`);
     }
