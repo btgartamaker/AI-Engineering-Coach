@@ -36,42 +36,43 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
   render(html`<div class="page-loading">Loading tool proficiency...</div>`, container);
 
   const data = await rpc<ToolProficiencyData>('getToolProficiency', filter as Record<string, unknown>);
+  const scoreCol = scoreColor(data.overallScore);
 
   render(html`
     <div class="page-header">
       <h2>Tool &amp; Skill Proficiency</h2>
-      <p style="color:var(--text-muted);margin:0;font-size:13px;">
+      <p class="page-subtitle">
         How effectively you use each skill area. Scores compare your tool usage patterns against benchmarks for your harness.
       </p>
     </div>
 
-    <div class="tool-proficiency-layout" style="padding:0 16px 24px 16px;max-width:960px;">
+    <div class="tp-layout">
 
       <!-- Score ring + suggestions -->
-      <div style="display:flex;gap:16px;margin-bottom:20px;">
-        <div class="card" style="flex:0 0 160px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-          ${ringHtml(data.overallScore, scoreColor(data.overallScore), 100)}
-          <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Skill Score</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${data.toolsUsed.length} tools used</div>
+      <div class="tp-hero">
+        <div class="tp-score-card" style="--accent:${scoreCol}">
+          ${ringHtml(data.overallScore, scoreCol, 100)}
+          <div class="tp-score-label">Skill Score</div>
+          <div class="tp-score-tools">${data.toolsUsed.length} tools used</div>
         </div>
-        <div class="card" style="flex:1;padding:16px;">
-          <h3 style="margin:0 0 8px 0;font-size:13px;">Suggestions</h3>
-          <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="tp-suggest-card">
+          <h3 class="tp-section-title">Suggestions</h3>
+          <div class="tp-suggestions">
             ${data.topSuggestions.map(s => html`
-              <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.4;">
-                <span style="color:${COLORS.blue};flex-shrink:0;">▸</span>
+              <div class="tp-suggestion">
+                <span class="tp-suggestion-bullet">▸</span>
                 <span>${s}</span>
               </div>
             `)}
           </div>
-          ${data.topSuggestions.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough data yet.</p>` : ''}
+          ${data.topSuggestions.length === 0 ? html`<p class="tp-empty">Not enough data yet.</p>` : ''}
         </div>
       </div>
 
       <!-- Group scores chart -->
-      <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Skill Areas</h3>
-        <p style="color:var(--text-muted);font-size:12px;margin:0 0 12px 0;">
+      <div class="tp-card">
+        <h3 class="tp-section-title">Skill Areas</h3>
+        <p class="tp-section-sub">
           Your usage rate (calls per session) vs. benchmark for each skill area.
           <br><span style="font-size:11px;">
             <strong>file-write</strong>: generating/editing code ·
@@ -83,27 +84,22 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
       </div>
 
       <!-- Blind spots -->
-      <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Blind Spots</h3>
+      <div class="tp-card">
+        <h3 class="tp-section-title">Blind Spots</h3>
         ${data.blindSpots.length === 0
-          ? html`<p style="color:var(--text-muted);font-size:13px;">No blind spots found — you've used all tools available for your harness!</p>`
-          : html`<div style="display:flex;flex-direction:column;gap:8px;">
+          ? html`<p class="tp-empty">No blind spots found — you've used all tools available for your harness!</p>`
+          : html`<div class="pb-list-col">
             ${data.blindSpots.map(b => html`
-              <details style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
-                <summary style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
-                  background:rgba(255,255,255,0.02);user-select:none;">
-                  <span style="font-size:13px;font-weight:500;flex:1;">${b.toolName}</span>
-                  <span style="font-size:11px;padding:2px 8px;border-radius:10px;
-                    background:${COLORS.yellow}22;color:${COLORS.yellow};border:1px solid ${COLORS.yellow}44;">
-                    Never used
-                  </span>
+              <details class="tp-blindspot">
+                <summary class="tp-blindspot-summary">
+                  <span class="tp-blindspot-name">${b.toolName}</span>
+                  <span class="tp-blindspot-badge" style="background:${COLORS.yellow}22;color:${COLORS.yellow};border:1px solid ${COLORS.yellow}44;">Never used</span>
                 </summary>
-                <div style="padding:12px 14px;">
-                  <p style="margin:0 0 8px 0;font-size:12px;color:var(--text-muted);">${b.expectedBenefit}</p>
-                  <div style="margin-top:8px;">
-                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Try it:</div>
-                    <pre style="margin:0;font-size:12px;line-height:1.5;color:#e6edf3;
-                      background:rgba(255,255,255,0.04);padding:8px;border-radius:4px;white-space:pre-wrap;">${b.exampleUsage}</pre>
+                <div class="tp-blindspot-body">
+                  <div class="tp-blindspot-body-inner">
+                    <p class="tp-blindspot-desc">${b.expectedBenefit}</p>
+                    <div class="tp-blindspot-example-label">Try it:</div>
+                    <pre class="pb-prompt-pre">${b.exampleUsage}</pre>
                   </div>
                 </div>
               </details>
@@ -112,24 +108,24 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
       </div>
 
       <!-- Growth summary -->
-      <div class="card" style="padding:16px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Skill Growth</h3>
+      <div class="tp-card">
+        <h3 class="tp-section-title">Skill Growth</h3>
         ${data.weeklyTrend.labels.length >= 2
-          ? html`<div style="display:flex;gap:16px;font-size:13px;">
-              <div style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
-                <div style="font-size:24px;font-weight:600;color:${COLORS.blue};">${data.groups.filter(g => g.gap >= 0).length}/${data.groups.length}</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Skills at or above benchmark</div>
+          ? html`<div class="tp-growth-grid">
+              <div class="tp-growth-cell">
+                <div class="tp-growth-val" style="color:${COLORS.blue};">${data.groups.filter(g => g.gap >= 0).length}/${data.groups.length}</div>
+                <div class="tp-growth-lbl">Skills at or above benchmark</div>
               </div>
-              <div style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
-                <div style="font-size:24px;font-weight:600;color:${COLORS.green};">${data.toolsUsed.length}</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Different tools used</div>
+              <div class="tp-growth-cell">
+                <div class="tp-growth-val" style="color:${COLORS.green};">${data.toolsUsed.length}</div>
+                <div class="tp-growth-lbl">Different tools used</div>
               </div>
-              <div style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
-                <div style="font-size:24px;font-weight:600;color:${COLORS.yellow};">${data.blindSpots.length}</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Blind spots to explore</div>
+              <div class="tp-growth-cell">
+                <div class="tp-growth-val" style="color:${COLORS.yellow};">${data.blindSpots.length}</div>
+                <div class="tp-growth-lbl">Blind spots to explore</div>
               </div>
             </div>`
-          : html`<p style="color:var(--text-muted);font-size:13px;">Not enough data yet. Keep using AI tools and check back for growth trends.</p>`}
+          : html`<p class="tp-empty">Not enough data yet. Keep using AI tools and check back for growth trends.</p>`}
       </div>
 
     </div>
@@ -178,7 +174,3 @@ function renderGroupChart(data: ToolProficiencyData): void {
     },
   });
 }
-
-/* ── Trend Chart ──────────────────────────────────────────────────── */
-
-

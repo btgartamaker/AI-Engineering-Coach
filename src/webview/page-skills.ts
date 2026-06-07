@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-/* Skills page -- AI triage for skill opportunities + community catalog discovery */
+/* Skill Finder page — reframed for human-in-the-loop value.
+ * Shows recurring prompt patterns as coaching insights rather than
+ * infrastructure to install.
+ */
 
 import { DateFilter, WorkflowCluster, WorkflowOptimizationData, SkillTriageResult, TriagedCluster, CatalogItem, CatalogDiscoverResult, CatalogTriageResult } from '../core/types';
 import { rpc, COLORS } from './shared';
@@ -13,23 +16,17 @@ import { getSkillCache, setSkillCache } from './skill-cache';
 
 const CATALOG_BASE = 'https://awesome-copilot.github.com';
 
-/** Set of cluster IDs the user has dismissed in this session */
-const dismissed = new Set<string>();
-
-/** Cached results so dismiss can re-render without re-fetching */
+/** Cached results so re-render can use existing data */
 let lastTriaged: TriagedCluster[] = [];
 let lastClusters: WorkflowCluster[] = [];
-let lastResultsEl: HTMLElement | null = null;
 
 /** Current page-level filter for cache scoping */
 let activeFilter: DateFilter = {};
 
 export async function renderSkills(container: HTMLElement, currentFilter: DateFilter): Promise<void> {
   activeFilter = currentFilter;
-  // Fetch workspaces to populate the selector
   const workspaces = await rpc<{ id: string; name: string }[]>('getWorkspaces');
 
-  // Default workspace: current sidebar filter if set
   const filterWsId = currentFilter.workspaceId
     ? (workspaces.find(w => w.id === currentFilter.workspaceId)?.id || '')
     : '';
@@ -37,7 +34,7 @@ export async function renderSkills(container: HTMLElement, currentFilter: DateFi
   render(html`
     <div class="sk-header">
       <h1>Skill Finder</h1>
-      <p class="sk-subtitle">Analyze your repeated prompts to discover custom skill opportunities and matching community skills.</p>
+      <p class="sk-subtitle">Discover recurring patterns in your prompts and get actionable coaching tips.</p>
     </div>
 
     <div class="sk-toolbar">
@@ -49,8 +46,6 @@ export async function renderSkills(container: HTMLElement, currentFilter: DateFi
             ${workspaces.map(ws => html`<option value="${ws.id}" selected="${ws.id === filterWsId || undefined}">${ws.name}</option>`)}
           </select>
         </label>
-      </div>
-      <div class="sk-toolbar-row">
         <label class="sk-lookback">
           <span>Look back</span>
           <select id="lookbackSelect" class="sk-select">
@@ -61,30 +56,31 @@ export async function renderSkills(container: HTMLElement, currentFilter: DateFi
             <option value="0">All time</option>
           </select>
         </label>
-      </div>
-      <div class="sk-toolbar-row">
-        <button id="analyzeBtn" class="sk-btn sk-btn-primary">Analyze</button>
+        <button id="analyzeBtn" class="sk-btn sk-btn-primary">Find Patterns</button>
         <span id="analyzeStatus" class="sk-status"></span>
       </div>
     </div>
 
     <section class="sk-section" id="customSection">
-      <h2 class="sk-section-title">Custom Skill Opportunities</h2>
+      <h2 class="sk-section-title">Recurring Patterns</h2>
       <div id="customResults">
-        <p class="sk-empty">Select a workspace and click Analyze to find repeated patterns that could become skills.</p>
+        <p class="sk-empty">Select a workspace and click Find Patterns to see your repeating prompt habits.</p>
       </div>
     </section>
 
     <section class="sk-section" id="catalogSection">
-      <h2 class="sk-section-title">Community Skills & Agents</h2>
-      <p class="sk-section-desc">
-        Matching picks from${' '}
-        <a href="${CATALOG_BASE}/" target="_blank">awesome-copilot</a>
-        ${' '}based on your repeated activities.
-      </p>
-      <div id="catalogResults">
-        <p class="sk-empty">Run the analysis to get personalized community recommendations.</p>
-      </div>
+      <details>
+        <summary class="sk-section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
+          <span>Community Catalog</span>
+          <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(optional)</span>
+        </summary>
+        <p class="sk-section-desc">
+          Matching picks from <a href="${CATALOG_BASE}/" target="_blank">awesome-copilot</a> based on your repeated activities.
+        </p>
+        <div id="catalogResults">
+          <p class="sk-empty">Run the analysis to get personalized community recommendations.</p>
+        </div>
+      </details>
     </section>
   `, container);
 
@@ -97,7 +93,7 @@ export async function renderSkills(container: HTMLElement, currentFilter: DateFi
     return;
   }
 
-  // Auto-run if navigated from dashboard with hint (no cache available)
+  // Auto-run if navigated from dashboard with hint
   const hint = consumeNavHint();
   if (hint === 'auto-run') {
     setTimeout(triggerRunAnalysis, 100);
@@ -111,25 +107,22 @@ function renderCachedResults(clusters: WorkflowCluster[], triaged: TriagedCluste
   const customEl = document.getElementById('customResults')!;
   const catalogEl = document.getElementById('catalogResults')!;
 
-  // Custom skills
   const strong = triaged.filter(t => t.verdict === 'strong').slice(0, 10);
   lastTriaged = strong;
   lastClusters = clusters;
-  lastResultsEl = customEl;
 
   if (strong.length === 0) {
-    statusEl.textContent = `Found ${clusters.length} patterns — no strong skill opportunities.`;
-    render(html`<p class="sk-empty">No repeating agent tasks detected.</p>`, customEl);
+    statusEl.textContent = `Found ${clusters.length} patterns — no strong coaching opportunities.`;
+    render(html`<p class="sk-empty">No repeating prompt patterns detected.</p>`, customEl);
   } else {
-    statusEl.textContent = `${strong.length} skill ${strong.length === 1 ? 'opportunity' : 'opportunities'} found (from dashboard scan)`;
+    statusEl.textContent = `${strong.length} coaching ${strong.length === 1 ? 'insight' : 'insights'} found (from dashboard scan)`;
     renderTriageResults(customEl, strong, clusters);
   }
 
-  // Catalog
   if (catalogMatches.length > 0) {
     renderCatalogList(catalogEl, catalogMatches, catalogMatches.length);
   } else {
-    render(html`<p class="sk-empty">No community matches from dashboard scan. Click Analyze to re-run with full catalog.</p>`, catalogEl);
+    render(html`<p class="sk-empty">No community matches from dashboard scan.</p>`, catalogEl);
   }
 
   updateNavBadge('badge-skills', strong.length + catalogMatches.length);
@@ -154,7 +147,6 @@ async function runAnalysis(): Promise<void> {
   statusEl.textContent = '';
   render(html`<p class="sk-loading">Scanning for repeated prompts...</p>`, customEl);
   render(html`<p class="sk-loading">Loading community catalog...</p>`, catalogEl);
-  dismissed.clear();
 
   // Build filter
   const filter: Record<string, unknown> = {};
@@ -177,9 +169,8 @@ async function runAnalysis(): Promise<void> {
       return;
     }
 
-    // Send top 20 most repeated clusters with full examples to AI
     const top20 = clusters.slice(0, 20);
-    statusEl.textContent = `Found ${clusters.length} patterns \u2014 sending top ${top20.length} to AI triage...`;
+    statusEl.textContent = `Found ${clusters.length} patterns — sending top ${top20.length} to AI triage...`;
 
     const result = await rpc<SkillTriageResult>('triageSkills', {
       clusters: top20.map(c => ({
@@ -195,13 +186,12 @@ async function runAnalysis(): Promise<void> {
     const strong = (result.triaged || []).filter(t => t.verdict === 'strong').slice(0, 10);
     lastTriaged = strong;
     lastClusters = clusters;
-    lastResultsEl = customEl;
 
     if (strong.length === 0) {
-      statusEl.textContent = 'No strong skill opportunities found.';
-      render(html`<p class="sk-empty">No repeating agent tasks detected. Your prompts may already be well-served or too diverse.</p>`, customEl);
+      statusEl.textContent = 'No strong coaching insights found.';
+      render(html`<p class="sk-empty">No repeating prompt patterns detected. Your prompts may already be well-served or too diverse.</p>`, customEl);
     } else {
-      statusEl.textContent = `${strong.length} skill ${strong.length === 1 ? 'opportunity' : 'opportunities'} found`;
+      statusEl.textContent = `${strong.length} coaching ${strong.length === 1 ? 'insight' : 'insights'} found`;
       renderTriageResults(customEl, strong, clusters);
     }
   } catch (err: unknown) {
@@ -209,7 +199,7 @@ async function runAnalysis(): Promise<void> {
     render(html`<p class="sk-error">Error: ${msg}</p>`, customEl);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Analyze';
+    btn.textContent = 'Find Patterns';
   }
 
   // Load community catalog after custom analysis and write to shared cache
@@ -222,22 +212,17 @@ function triggerRunAnalysis(): void {
   void runAnalysis();
 }
 
-/* ── Triage Results (Custom Skills) ───────────────────────────────── */
+/* ── Triage Results (Coaching Insights) ───────────────────────────── */
 
 function renderTriageResults(container: HTMLElement, triaged: TriagedCluster[], clusters: WorkflowCluster[]): void {
-  const visible = triaged.filter(t => !dismissed.has(t.id));
-  if (visible.length === 0) {
-    render(html`<p class="sk-empty">All suggestions dismissed. Run analysis again to refresh.</p>`, container);
-    return;
-  }
-  render(html`<div class="sk-grid">${visible.map((t, i) => {
+  render(html`<div class="sk-grid">${triaged.map((t, i) => {
     const cluster = clusters.find(c => c.id === t.id);
+    const hasExamples = cluster && cluster.examples.length > 0;
     return html`
       <div class="sk-card" data-idx="${i}" data-id="${t.id}">
         <div class="sk-card-header">
           <span class="sk-rank">${i + 1}</span>
           <div class="sk-card-title">${t.suggestedSkillName || t.label}</div>
-          <button class="sk-btn-dismiss" data-dismiss-id="${t.id}" title="Dismiss">\u00d7</button>
         </div>
         <div class="sk-card-body">
           <p class="sk-card-reason">${t.reason}</p>
@@ -247,22 +232,33 @@ function renderTriageResults(container: HTMLElement, triaged: TriagedCluster[], 
               <span>${cluster.sessions} sessions</span>
               ${cluster.cancelRate > 0 ? html`<span>${cluster.cancelRate}% cancelled</span>` : null}
             </div>
-            ${cluster.examples.length > 0 ? html`<div class="sk-card-examples">${cluster.examples.slice(0, 3).map(ex => html`<div class="sk-card-example">${ex.length > 120 ? ex.slice(0, 117) + '...' : ex}</div>`)}</div>` : null}
-            <div class="sk-card-actions">
-              <button class="sk-btn sk-btn-install" data-cluster-idx="${i}">Install Skill</button>
+            ${hasExamples ? html`
+              <details class="sk-examples-details">
+                <summary class="sk-examples-summary">View ${cluster.examples.length} example${cluster.examples.length !== 1 ? 's' : ''}</summary>
+                <div class="sk-examples-body">
+                  <div class="sk-examples-body-inner">
+                    ${cluster.examples.slice(0, 5).map(ex => html`
+                      <div class="sk-card-example">${ex.length > 200 ? ex.slice(0, 197) + '...' : ex}</div>
+                    `)}
+                  </div>
+                </div>
+              </details>
+            ` : null}
+            <div class="sk-card-actions" style="margin-top:10px;">
+              <button class="sk-btn sk-btn-secondary sk-btn-generate" data-cluster-idx="${i}">Generate Skill</button>
               <div class="sk-card-preview" data-cluster-idx="${i}"></div>
             </div>` : null}
         </div>
       </div>`;
   })}</div>`, container);
 
-  // Install buttons
-  for (const btn of container.querySelectorAll('.sk-btn-install')) {
+  // Generate Skill buttons (secondary action)
+  for (const btn of container.querySelectorAll('.sk-btn-generate')) {
     btn.addEventListener('click', (e) => {
       void (async () => {
         const el = e.currentTarget as HTMLButtonElement;
         const idx = Number.parseInt(el.dataset.clusterIdx || '0', 10);
-        const t = visible[idx];
+        const t = triaged[idx];
         if (!t) return;
         const cluster = clusters.find(c => c.id === t.id);
         if (!cluster) return;
@@ -309,29 +305,19 @@ function renderTriageResults(container: HTMLElement, triaged: TriagedCluster[], 
             previewEl.querySelector<HTMLElement>('.sk-btn-cancel')?.addEventListener('click', () => {
               render(null, previewEl);
               el.disabled = false;
-              el.textContent = 'Install Skill';
+              el.textContent = 'Generate Skill';
             });
           }
 
           el.textContent = 'Review Below';
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Generation failed';
-          el.textContent = 'Install Skill';
+          el.textContent = 'Generate Skill';
           el.disabled = false;
           const previewEl = el.parentElement?.querySelector<HTMLElement>('.sk-card-preview');
           if (previewEl) render(html`<span class="sk-error">${msg}</span>`, previewEl);
         }
       })();
-    });
-  }
-
-  // Dismiss buttons
-  for (const btn of container.querySelectorAll('.sk-btn-dismiss')) {
-    btn.addEventListener('click', (e) => {
-      const id = (e.currentTarget as HTMLElement).dataset.dismissId || '';
-      if (!id) return;
-      dismissed.add(id);
-      if (lastResultsEl) renderTriageResults(lastResultsEl, lastTriaged, lastClusters);
     });
   }
 }
@@ -348,7 +334,6 @@ const kindColors: Record<string, string> = {
 
 async function loadCatalog(container: HTMLElement, clusters: WorkflowCluster[], workspace?: string): Promise<CatalogItem[]> {
   try {
-    // Fetch ALL catalog items (no pre-filtering)
     const result = await rpc<CatalogDiscoverResult>('discoverCatalog', {} as Record<string, unknown>);
     if (!result.items || result.items.length === 0) {
       render(html`<p class="sk-empty">No items found in the community catalog.</p>`, container);
