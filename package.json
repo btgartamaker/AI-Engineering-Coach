@@ -2,7 +2,7 @@
   "name": "ai-engineer-coach",
   "displayName": "AI Engineer Coach",
   "description": "Fork: Analyze your AI coding assistant usage across VS Code, Xcode, Claude, Codex, OpenCode, Pi, and Gemini. Read-only, zero telemetry.",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "publisher": "btgartamaker",
   "author": {
     "name": "Brandon Gartamaker (fork), Sanjay Singh, Joy Distelbrink, Tamas Boncz, Aymen Furter (original)"

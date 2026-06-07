@@ -25,7 +25,7 @@ import { renderCorrections } from './page-corrections';
 import { renderPlaybook } from './page-playbook';
 import { renderToolProficiency } from './page-tool-proficiency';
 import { renderROI } from './page-roi';
-import { renderPractice } from './page-practice';
+
 import { FF_TOKEN_REPORTING_ENABLED } from '../core/constants';
 
 function normalizePageForFeatureFlags(page: string): string {
@@ -658,7 +658,7 @@ function renderPage(page: string): void {
     case 'playbook': withErrorBoundary('Playbook', content, () => renderPlaybook(content, currentFilter)); break;
     case 'tool-proficiency': withErrorBoundary('Tool Proficiency', content, () => renderToolProficiency(content, currentFilter)); break;
     case 'roi': withErrorBoundary('ROI', content, () => renderROI(content, currentFilter)); break;
-    case 'practice': withErrorBoundary('Practice', content, () => renderPractice(content, currentFilter)); break;
+    case 'practice': withErrorBoundary('Playbook', content, () => renderPlaybook(content, currentFilter)); break;
     default: render(html`<p>Unknown page</p>`, content);
   }
 }

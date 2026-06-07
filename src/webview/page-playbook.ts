@@ -5,8 +5,8 @@
 
 /* Prompt Engineering Playbook page (Spec 12) */
 
-import type { DateFilter, PlaybookData, PromptExample, PromptPattern } from '../core/types';
-import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary } from './shared';
+import type { DateFilter, PlaybookData, PromptExample, PromptPattern, PracticePlanData, SkillArea } from '../core/types';
+import { rpc, createChart, destroyCharts, COLORS, scoreColor, ringHtml, withErrorBoundary, formatNum } from './shared';
 import { html, render, CanvasEl } from './render';
 
 const DIMMED_COLORS: Record<string, string> = {
@@ -24,11 +24,48 @@ export function renderPlaybook(container: HTMLElement, filter: DateFilter): void
 /** Redact sensitive data in prompt examples (default: on) */
 let redactEnabled = true;
 
+const SKILL_LABELS: Record<SkillArea, string> = {
+  'prompt-specificity': 'Prompt Specificity',
+  'constraint-writing': 'Constraint Writing',
+  'context-provision': 'Context Provision',
+  'tool-selection': 'Tool Selection',
+  'session-hygiene': 'Session Hygiene',
+  'error-recovery': 'Error Recovery',
+  'task-decomposition': 'Task Decomposition',
+};
+
+const SKILL_COLORS: Record<string, string> = {
+  'prompt-specificity': '#f0883e',
+  'constraint-writing': '#d29922',
+  'context-provision': '#58a6ff',
+  'tool-selection': '#3fb950',
+  'session-hygiene': '#bc8cff',
+  'error-recovery': '#f85149',
+  'task-decomposition': '#8b949e',
+};
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  beginner: COLORS.green,
+  intermediate: COLORS.yellow,
+  advanced: COLORS.red,
+};
+
+const LEVEL_LABELS: Record<string, string> = {
+  unaware: 'Unaware',
+  aware: 'Aware',
+  practicing: 'Practicing',
+  proficient: 'Proficient',
+  mentoring: 'Mentoring',
+};
+
 async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): Promise<void> {
   destroyCharts();
   render(html`<div class="page-loading">Loading your prompt playbook...</div>`, container);
 
-  const data = await rpc<PlaybookData>('getPlaybook', { ...filter, redact: redactEnabled } as Record<string, unknown>);
+  const [data, practiceData] = await Promise.all([
+    rpc<PlaybookData>('getPlaybook', { ...filter, redact: redactEnabled } as Record<string, unknown>),
+    rpc<PracticePlanData>('getPracticePlan', { filter } as Record<string, unknown>).catch(() => null),
+  ]);
 
   render(html`
     <div class="page-header">
@@ -104,6 +141,20 @@ async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): 
           ${data.relevantPatterns.map(p => playbookPatternCard(p))}
         </div>
       </div>
+
+      <!-- Practice Exercises -->
+      ${practiceData && practiceData.recommendedExercises.length > 0 ? html`
+      <div class="card" style="padding:16px;">
+        <h3 style="margin:0 0 8px 0;font-size:14px;">Practice Exercises</h3>
+        <p style="color:var(--text-muted);font-size:12px;margin:0 0 12px 0;">
+          Targeted exercises to strengthen your weakest skill areas.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${practiceData.recommendedExercises.map(ex => practiceExerciseCard(ex))}
+        </div>
+      </div>
+      ` : ''}
+
     </div>
   `, container);
 
@@ -249,6 +300,46 @@ function playbookPatternCard(p: PromptPattern): any {
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Example:</div>
           <pre style="margin:0;font-size:12px;line-height:1.5;color:#e6edf3;
             background:rgba(255,255,255,0.04);padding:8px;border-radius:4px;white-space:pre-wrap;">${p.userPromptExample}</pre>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+/* ── Practice Exercise Card ───────────────────────────────────────── */
+
+function practiceExerciseCard(ex: import('../core/types').PracticeExercise): any {
+  return html`
+    <details style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
+      <summary style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
+        background:rgba(255,255,255,0.02);user-select:none;">
+        <span style="font-size:13px;font-weight:500;flex:1;">${ex.title}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;
+          background:${DIFFICULTY_COLORS[ex.difficulty]}22;color:${DIFFICULTY_COLORS[ex.difficulty]};
+          border:1px solid ${DIFFICULTY_COLORS[ex.difficulty]}44;">${ex.difficulty}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;
+          background:${(SKILL_COLORS as Record<string, string>)[ex.skillArea]}22;color:${(SKILL_COLORS as Record<string, string>)[ex.skillArea]};
+          border:1px solid ${(SKILL_COLORS as Record<string, string>)[ex.skillArea]}44;">${SKILL_LABELS[ex.skillArea]}</span>
+        <span style="font-size:11px;color:var(--text-muted);">${ex.estimatedMinutes}m</span>
+      </summary>
+      <div style="padding:12px 14px;">
+        <p style="margin:0 0 8px 0;font-size:12px;color:var(--text-muted);">${ex.description}</p>
+        ${ex.impactStatement ? html`
+          <div style="margin-bottom:8px;padding:8px 10px;background:rgba(59,185,80,0.06);border-left:3px solid ${COLORS.green};border-radius:4px;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Why this matters:</div>
+            <div style="font-size:12px;color:${COLORS.green};">${ex.impactStatement}</div>
+          </div>
+        ` : ''}
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Exercise:</div>
+          <pre style="margin:0;font-size:12px;line-height:1.5;color:#e6edf3;
+            background:rgba(255,255,255,0.04);padding:8px;border-radius:4px;white-space:pre-wrap;">${ex.exercisePrompt}</pre>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Success Criteria:</div>
+          <ul style="margin:0;padding-left:18px;font-size:12px;color:${COLORS.green};line-height:1.6;">
+            ${ex.successCriteria.map(c => html`<li>${c}</li>`)}
+          </ul>
         </div>
       </div>
     </details>
