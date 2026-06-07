@@ -7,7 +7,7 @@
 
 import { DateFilter, ConfigHealthData, WorkspaceConfigHealth, ConfigFileInfo, ContextProvisionScore, HookCoverageInfo, AgenticReadinessScore, ContextReviewResult, ContextReviewFinding } from '../core/types';
 import { TOKEN_DATA_AVAILABLE_FROM } from '../core/constants';
-import { rpc, COLORS, Chart, trackChart, destroyCharts } from './shared';
+import { rpc, COLORS, Chart, trackChart, destroyCharts, displayWsName } from './shared';
 import { html, render, StatCard, ComponentChildren } from './render';
 import { renderContextManagement } from './page-context-mgmt';
 
@@ -424,7 +424,7 @@ function renderReviewCard(review: ContextReviewResult): ComponentChildren {
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <span style="font-size:24px;font-weight:800;color:${gc};line-height:1;">${review.overallGrade}</span>
           <div>
-            <div style="font-weight:600;font-size:14px;">${review.workspaceName}</div>
+            <div style="font-weight:600;font-size:14px;">${displayWsName(review.workspaceName)}</div>
             <div style="font-size:11px;color:var(--text-muted);">${review.overallScore}/100 \u2014 ${goodCount} good, ${warnCount} warnings, ${critCount} critical</div>
           </div>
         </div>
@@ -487,7 +487,7 @@ function renderTreemap(workspaces: WorkspaceConfigHealth[], container: HTMLEleme
     if (w.hasSkills) badges.push('Skills');
     if (w.hasHooks) badges.push('Hooks');
     return {
-      name: w.workspaceName,
+      name: displayWsName(w.workspaceName),
       requests: w.requestCount,
       sessions: w.sessionCount,
       score: w.progressiveDisclosureScore,
@@ -629,7 +629,7 @@ function showTileDetail(ws: WorkspaceConfigHealth, container: HTMLElement): void
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-weight:600;font-size:14px;">${ws.workspaceName}</span>
+            <span style="font-weight:600;font-size:14px;">${displayWsName(ws.workspaceName)}</span>
             <span style="font-size:11px;color:${hc(uniqueHarness.split(', ')[0])};">${uniqueHarness}</span>
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${ws.requestCount} requests / ${ws.sessionCount} sessions / last: ${lastAct}</div>

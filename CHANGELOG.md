@@ -1,7 +1,12 @@
 # Changelog
 
-## 0.2.14 — Playbook & Skills Page UI Polish + Human-in-the-Loop Reframe
+## 0.2.14 — Playbook & Skills Page UI Polish + Human-in-the-Loop Reframe + Workspace Consolidation
 
+- **Playbook grade display**: the Overall Grade card now shows the letter grade (A, B, C, etc.) prominently alongside the score ring
+- **Playbook HTML entity fix**: "Before & After" section title now renders `&` correctly instead of `&amp;`
+- **Removed Tool Proficiency page**: the "Skills" sidebar entry and routing are gone — tool call counts are not directly actionable for humans
+- **Pi workspace name fix**: `decodePiWorkspaceName` now returns the basename of `cwd` instead of the full path, so workspace names are consistent across Timeline, Output, and Context Health
+- **Timeline detail cleanup**: removed redundant `session.location` from the session detail view (was duplicating workspace info for Pi sessions)
 - **Playbook UI cleanup**: extracted ~150 lines of inline styles into dedicated `.pb-*` CSS classes
   - Stat cards with colored left-border accents (green/yellow/red based on grade)
   - Responsive hero row (grade ring + radar) stacks vertically below 700px

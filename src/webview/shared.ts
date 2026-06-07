@@ -352,6 +352,18 @@ export function harnessColor(name: string, idx: number): string {
   return HARNESS_COLORS[name] || PALETTE[idx % PALETTE.length];
 }
 
+/**
+ * Normalize a workspace name for display.
+ * If the name looks like a file path (contains `/` or `\`), strip it down
+ * to just the last path segment. Otherwise return as-is.
+ * This handles old cached data where workspace names may still be full paths. */
+export function displayWsName(name: string): string {
+  if (name.includes('/') || name.includes('\\')) {
+    return name.replace(/\\/g, '/').replace(/\/+$/, '').split('/').pop() || name;
+  }
+  return name;
+}
+
 export const SEVERITY_COLORS: Record<string, string> = {
   high: COLORS.red,
   medium: COLORS.yellow,

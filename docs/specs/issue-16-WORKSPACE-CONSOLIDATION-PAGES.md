@@ -1,19 +1,45 @@
 # Issue 16: Workspace Name Consolidation in Timeline, Output, Context Health
 
 ## Problem
-While the dashboard and dropdowns normalize workspace names to simplified basenames (last path segment), three pages still expose full paths alongside simplified names:
+While the dashboard and dropdowns normalize workspace names to simplified basenames (last path segment), three pages still display full paths:
 
-1. **Timeline session detail** — shows `workspaceName` (simplified) and `location` (full `cwd` for Pi, making them redundant duplicates)
-2. **Output charts/tables** — workspace labels come from `session.workspaceName`; for Pi sessions this is the full `cwd` because `decodePiWorkspaceName` returns `header.cwd` when available
-3. **Context Health treemap + detail** — workspace names come from the same session data, so Pi workspaces appear as full paths
+1. **Timeline** — session list, lane labels, and detail all show `workspaceName`; if it's a full path (e.g. `/Users/.../project`) it renders as-is
+2. **Output** — "By Workspace" chart labels and the `Workspace` column in the token table use raw `workspaceName` which may be a full path
+3. **Context Health** — treemap tiles and detail panel show `workspaceName` which may be a full path
 
-## Root Cause
-`src/core/parser-pi.ts` `decodePiWorkspaceName` returns the full `header.cwd` string when it can read the session header, instead of the basename. VS Code, Claude, Codex, and Gemini parsers already return basenames.
+## Root Causes
+### Parser-level (new data, already fixed)
+`src/core/parser-pi.ts` `decodePiWorkspaceName` returned the full `header.cwd` instead of `path.basename(header.cwd)`. Fixed in v0.2.14 but only helps newly parsed sessions.
+
+### Cached data (still broken)
+Old session data was already cached with full-path workspace names. The pages have no display-level normalization.
 
 ## Fix
-1. **Pi parser**: change `decodePiWorkspaceName` to return `path.basename(header.cwd)` instead of the full `cwd`
-2. **Timeline detail**: remove `session.location` from the session detail display line (it duplicates workspace info for Pi and is just a UI location string for VS Code)
+### A. Display-level normalization (robust for all data)
+Add a `displayWsName(name: string): string` helper to `src/webview/shared.ts` that:
+- If the name contains `/` or `\`, extracts the last path segment
+- Otherwise returns the name as-is
+
+### B. Apply to Timeline
+Wrap every `workspaceName` render in `displayWsName()`:
+- Session list header (`.session-ws`)
+- Lane labels (`.lane-ws`)
+- Lane tooltips
+- Lane click detail (`<h3>`)
+- Session detail (`<h2>`)
+
+### C. Apply to Output
+- Production chart labels (`prod.byWorkspace.labels`)
+- Token consumption chart dataset labels
+- Token table `Workspace` column (`req.workspace`)
+
+### D. Apply to Context Health
+- Treemap data entries (`name: w.workspaceName`)
+- Detail panel header (`ws.workspaceName`)
+- Review section (`review.workspaceName`)
 
 ## Files
-- `src/core/parser-pi.ts` — fix `decodePiWorkspaceName`
-- `src/webview/page-timeline.ts` — remove `session.location` from detail
+- `src/webview/shared.ts` — add `displayWsName()`
+- `src/webview/page-timeline.ts` — wrap all `workspaceName` in `displayWsName()`
+- `src/webview/page-output.ts` — normalize workspace labels in charts and table
+- `src/webview/page-config.ts` — normalize workspace names in treemap, detail, review

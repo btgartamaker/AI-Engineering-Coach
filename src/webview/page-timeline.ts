@@ -6,7 +6,7 @@
 /* Timeline page renderer -- shows the Gantt timeline view */
 
 import { DateFilter } from '../core/types';
-import { rpc, el, formatDate, formatTime } from './shared';
+import { rpc, el, formatDate, formatTime, displayWsName } from './shared';
 import { html, render } from './render';
 
 /* ── Gantt timeline types ── */
@@ -239,7 +239,7 @@ export async function renderTimeline(container: HTMLElement, currentFilter: Date
       item.dataset.id = s.sessionId;
       render(html`
         <div class="session-header">
-          <span class="session-ws">${s.workspaceName}</span>
+          <span class="session-ws">${displayWsName(s.workspaceName)}</span>
           <span class="session-count">${s.requestCount} msgs</span>
         </div>
         <div class="session-date">${formatDate(s.lastMessageDate)}</div>
@@ -333,7 +333,7 @@ function renderLanes(tl: TlData, lanes: HTMLElement, detailEl: HTMLElement): voi
     const lane = el('div', 'timeline-lane');
 
     const label = el('div', 'timeline-lane-label');
-    render(html`<span class="lane-ws">${s.workspaceName}</span><span class="lane-meta">${s.requestCount} req</span>`, label);
+    render(html`<span class="lane-ws">${displayWsName(s.workspaceName)}</span><span class="lane-meta">${s.requestCount} req</span>`, label);
     lane.appendChild(label);
 
     const track = el('div', 'timeline-lane-track');
@@ -346,7 +346,7 @@ function renderLanes(tl: TlData, lanes: HTMLElement, detailEl: HTMLElement): voi
     bar.style.width = widthPct.toFixed(2) + '%';
     bar.style.background = color.bg;
     bar.style.border = `1px solid ${color.border}`;
-    bar.title = `${s.workspaceName}: ${s.requestCount} requests\n${formatTime(s.firstActivity)} - ${formatTime(s.lastActivity)}`;
+    bar.title = `${displayWsName(s.workspaceName)}: ${s.requestCount} requests\n${formatTime(s.firstActivity)} - ${formatTime(s.lastActivity)}`;
     track.appendChild(bar);
 
     for (const r of s.requests) {
@@ -365,7 +365,7 @@ function renderLanes(tl: TlData, lanes: HTMLElement, detailEl: HTMLElement): voi
       lane.style.borderColor = color.border;
 
       render(html`<div class="timeline-detail">
-        <h3>${s.workspaceName} \u2014 ${s.sessionName}</h3>
+        <h3>${displayWsName(s.workspaceName)} \u2014 ${s.sessionName}</h3>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
           ${formatTime(s.firstActivity)} - ${formatTime(s.lastActivity)} | ${s.requestCount} requests
         </div>
@@ -402,7 +402,7 @@ async function showSessionDetail(sessionId: string): Promise<void> {
 
   render(html`<div class="session-detail-inner">
     <div class="session-detail-header">
-      <h2>${session.workspaceName}</h2>
+      <h2>${displayWsName(session.workspaceName)}</h2>
       <span class="muted">${formatDate(session.creationDate)} \u00b7 ${session.requestCount} messages</span>
     </div>
     <div class="message-thread">

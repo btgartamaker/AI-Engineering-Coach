@@ -8,7 +8,7 @@
 import { DateFilter } from '../core/types';
 import { TOKEN_DATA_AVAILABLE_FROM, FF_TOKEN_REPORTING_ENABLED } from '../core/constants';
 import { isoWeek } from '../core/helpers';
-import { rpc, createChart, formatNum, $$, PALETTE, COLORS, HARNESS_COLORS } from './shared';
+import { rpc, createChart, formatNum, $$, PALETTE, COLORS, HARNESS_COLORS, displayWsName } from './shared';
 import { html, render, StatCard, CanvasEl, ComponentChildren } from './render';
 
 type AggLevel = 'daily' | 'weekly' | 'monthly';
@@ -386,7 +386,7 @@ export async function renderOutput(container: HTMLElement, currentFilter: DateFi
 
     const wsBarColors = prod.byWorkspace.labels.map((_, i) => wsColor(i));
     createChart('prodWsChart', 'bar', {
-      labels: prod.byWorkspace.labels,
+      labels: prod.byWorkspace.labels.map(displayWsName),
       datasets: [{ label: 'AI LoC', data: prod.byWorkspace.aiLoc, backgroundColor: wsBarColors }],
     }, {
       indexAxis: 'y',
@@ -497,7 +497,7 @@ export async function renderOutput(container: HTMLElement, currentFilter: DateFi
     const otherWs = wsNames.slice(20);
     const otherWsData = wsLabels.map((_, i) => otherWs.reduce((sum, ws) => sum + (wsBuckets[ws]?.[i] ?? 0), 0));
     const wsDatasets: Record<string, unknown>[] = topWs.map((ws, i) => ({
-      label: ws, data: wsBuckets[ws], backgroundColor: PALETTE[i % PALETTE.length] + '99',
+      label: displayWsName(ws), data: wsBuckets[ws], backgroundColor: PALETTE[i % PALETTE.length] + '99',
       borderColor: PALETTE[i % PALETTE.length], borderWidth: 1, stack: 'ws',
     }));
     if (otherWs.length > 0) {
@@ -621,7 +621,7 @@ export async function renderOutput(container: HTMLElement, currentFilter: DateFi
             : req.status === 'no-data' ? html`<span class="missing-badge" title="Source structurally does not record token counts.">no-data</span>`
             : req.status === 'partial' ? html`<span class="missing-badge" title="Only output captured \u2014 total incomplete.">partial</span>`
             : html`<span class="missing-badge" title="No native token count.">missing</span>`;
-          const wsCell = req.workspace || html`<span class="missing-badge">unknown</span>`;
+          const wsCell = req.workspace ? displayWsName(req.workspace) : html`<span class="missing-badge">unknown</span>`;
           const harnessCell = req.harness ? html`<span class="harness-badge" style="--harness-color:${harnessColor(req.harness)}" title=${req.harness}>${req.harness}</span>` : '';
           return html`<tr><td>${d}</td><td>${wsCell}</td><td>${harnessCell}</td><td>${req.model}</td><td>${tokensCell}</td><td><span class="prompt-preview-trigger" onclick=${(e: MouseEvent) => showPromptPopup(e, req.fullPrompt)}>${req.preview.slice(0, 50)}\u2026</span></td></tr>`;
         })}

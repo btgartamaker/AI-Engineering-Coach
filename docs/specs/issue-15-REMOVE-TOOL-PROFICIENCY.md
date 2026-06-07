@@ -1,11 +1,14 @@
-# Issue 15: Remove Tool Proficiency Page
+# Issue 15: Remove Skill-Related Pages — Tool Proficiency + Skill Finder
 
 ## Problem
-The "Skills" page (`page-tool-proficiency.ts`) shows tool call counts, benchmarks, and blind spots. The user points out that humans do not have direct control over which tools the AI invokes — the tool calls are largely automatic. The page therefore provides limited actionable value for human-in-the-loop improvement.
+Two skill-related pages were evaluated as not providing enough human-in-the-loop value:
+
+1. **Tool Proficiency** (`page-tool-proficiency.ts`, data-page="tool-proficiency") — shows tool call counts, benchmarks, blind spots. Humans do not directly control which tools the AI invokes.
+2. **Skill Finder** (`page-skills.ts`, data-page="skills") — shows recurring prompt patterns with an "Install Skill" flow. The coaching insight is buried under infrastructure. Even after the issue-13 reframe, the underlying data comes from AI triage and the page still requires manual analysis before returning value.
 
 ## Decision
-Remove the "Skills" sidebar entry and routing. The underlying page file can remain in the repo (not linked from anywhere) for potential future revival.
+Remove both "Tool Proficiency / Skills" and "Skill Finder" sidebar entries and routing. The underlying page files can remain in the repo (not linked) for potential future revival.
 
 ## Files
-- `src/webview/panel-html.ts` — remove `<li>` for `data-page="tool-proficiency"`
-- `src/webview/app.ts` — remove `case 'tool-proficiency'` routing
+- `src/webview/panel-html.ts` — remove both `<li>` entries (`data-page="tool-proficiency"` and `data-page="skills"`)
+- `src/webview/app.ts` — remove both `case` branches and both imports
