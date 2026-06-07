@@ -123,6 +123,25 @@ export interface ContextManagementData {
   antiPatterns: AntiPattern[];
   /** Actionable tips based on observed patterns */
   tips: string[];
+  /** Recommendations generated from context utilization patterns */
+  recommendations: ContextRecommendation[];
+}
+
+/* ---- Context Window Health (Spec 13) ---- */
+
+export type ContextSlot =
+  | 'instructions'
+  | 'conversation'
+  | 'files-read'
+  | 'tool-results'
+  | 'system-prompt'
+  | 'unknown';
+
+export interface ContextRecommendation {
+  type: 'compact-earlier' | 'split-session' | 'reduce-files' | 'trim-history';
+  sessionId?: string;
+  suggestion: string;
+  expectedTokensSaved: number;
 }
 
 /* ---- Context Review (agent-based) ---- */

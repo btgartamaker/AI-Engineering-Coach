@@ -19,7 +19,7 @@ import {
   WorkspaceTrendSeries,
   SessionContextDetail,
   SessionTimelineEvent,
-  WorkspaceContextSessionsData,
+  WorkspaceContextSessionsData, ContextSlot, ContextRecommendation,
 } from './types';
 import { toDateStr } from './helpers';
 import {
@@ -179,6 +179,7 @@ export class ContextAnalyzer extends AnalyzerBase {
     const workspaceTrend = this.buildWorkspaceTrend(sessions, trend.map(t => t.label), workspaces);
     const antiPatterns = this.detectContextAntiPatterns(sessions, thresholds);
     const tips = this.generateTips(workspaces, totalCompactions, overallScore, thresholds);
+    const recommendations = this.generateRecommendations(sessions, workspaces, totalCompactions);
 
     return {
       overallScore,
@@ -194,6 +195,7 @@ export class ContextAnalyzer extends AnalyzerBase {
       totalSessions: sessions.length,
       antiPatterns,
       tips,
+      recommendations,
     };
   }
 
@@ -843,6 +845,167 @@ export class ContextAnalyzer extends AnalyzerBase {
    * session-aggregated tokens — they have data but not the per-request
    * granularity that Context Management requires.
    */
+  /* ── Slot Breakdown Estimation (Spec 13) ─────────────────────── */
+
+  getSlotBreakdown(sessions: Session[]): Record<ContextSlot, number> {
+    let instructions = 0;
+    let conversation = 0;
+    let filesRead = 0;
+    let toolResults = 0;
+    let systemPrompt = 0;
+    let unknown = 0;
+
+    for (const session of sessions) {
+      // System prompt estimate per harness
+      const sysPromptTokens = this.estimateSystemPrompt(session.harness);
+      systemPrompt += sysPromptTokens * session.requestCount;
+
+      for (const req of session.requests) {
+        // Conversation: message + response
+        const msgTokens = Math.ceil(req.messageText.length / 4);
+        const respTokens = Math.ceil(req.responseText.length / 4);
+        conversation += msgTokens + respTokens;
+
+        // Instructions
+        const instTokens = req.customInstructions.reduce(
+          (sum, ci) => sum + Math.ceil(ci.length / 4), 0
+        );
+        instructions += instTokens;
+
+        // Tool results
+        const toolTokens = req.toolsUsed.reduce(
+          (sum, t) => sum + Math.ceil(t.length / 4), 0
+        );
+        toolResults += toolTokens;
+
+        // Files read (approximate from referenced files)
+        const fileTokens = req.referencedFiles.length * 500; // ~500 tokens per file
+        filesRead += fileTokens;
+
+        // Unknown = promptTokens - estimated, if available
+        if (req.promptTokens != null && req.promptTokens > 0) {
+          const estimated =
+            msgTokens + respTokens + instTokens + toolTokens + fileTokens + sysPromptTokens;
+          const residual = Math.max(0, req.promptTokens - estimated);
+          unknown += residual;
+        }
+      }
+    }
+
+    return {
+      instructions,
+      conversation,
+      'files-read': filesRead,
+      'tool-results': toolResults,
+      'system-prompt': systemPrompt,
+      unknown,
+    };
+  }
+
+  /* ── Recommendation Generation (Spec 13) ──────────────────────── */
+
+  generateRecommendations(
+    sessions: Session[],
+    workspaces: WorkspaceContextScore[],
+    totalCompactions: number,
+  ): ContextRecommendation[] {
+    const recommendations: ContextRecommendation[] = [];
+
+    // Find long sessions with compactions
+    for (const session of sessions) {
+      if (session.requestCount < 10) continue;
+      const sessionCompactions = session.requests.filter(r => r.compaction != null).length;
+      if (sessionCompactions > 0) {
+        const midPoint = Math.floor(session.requestCount / 3);
+        const suggestion = this.buildCompactionSuggestion(session, midPoint, sessionCompactions);
+        recommendations.push({
+          type: 'compact-earlier',
+          sessionId: session.sessionId,
+          suggestion,
+          expectedTokensSaved: sessionCompactions * 2000,
+        });
+      }
+
+      // Split-session: topic shifts in long sessions
+      if (session.requestCount >= 20) {
+        const topicShiftIdx = this.detectTopicShift(session);
+        if (topicShiftIdx > 0) {
+          recommendations.push({
+            type: 'split-session',
+            sessionId: session.sessionId,
+            suggestion: `Split session at turn ${topicShiftIdx} when you switched focus. Starting a new session there would have kept context clean and avoided ~${Math.round((session.requestCount - topicShiftIdx) * 0.3 * 1000)} wasted tokens.`,
+            expectedTokensSaved: Math.round((session.requestCount - topicShiftIdx) * 300),
+          });
+        }
+      }
+
+      // Reduce files: sessions with many referenced files
+      const totalRefs = session.requests.reduce((s, r) => s + r.referencedFiles.length, 0);
+      if (totalRefs > 50 && session.requestCount > 5) {
+        recommendations.push({
+          type: 'reduce-files',
+          sessionId: session.sessionId,
+          suggestion: `Session referenced ${totalRefs} files. Pin only the files you actively need — each file adds ~500 tokens to context.`,
+          expectedTokensSaved: Math.round(totalRefs * 0.3 * 500),
+        });
+      }
+
+      // Trim history: very long sessions
+      if (session.requestCount >= 40) {
+        recommendations.push({
+          type: 'trim-history',
+          sessionId: session.sessionId,
+          suggestion: `Session has ${session.requestCount} turns. Consider opening a fresh session — by turn 40, conversation history alone consumes ~${Math.round(session.requestCount * 150)} tokens of context.`,
+          expectedTokensSaved: Math.round(session.requestCount * 150 * 0.5),
+        });
+      }
+    }
+
+    // Limit total recommendations to avoid overwhelm
+    return recommendations.slice(0, 8);
+  }
+
+  private estimateSystemPrompt(harness: string): number {
+    const prompts: Record<string, number> = {
+      'GitHub Copilot': 2000,
+      'Local Agent': 3000,
+      'Claude': 2500,
+      'Codex': 2000,
+    };
+    return prompts[harness] ?? 2000;
+  }
+
+  private buildCompactionSuggestion(session: Session, midPoint: number, count: number): string {
+    if (count === 1) {
+      return `This session auto-compacted at turn ${midPoint}. Opening a new session around turn ${midPoint} avoids the compaction entirely.`;
+    }
+    return `Session auto-compacted ${count} times (most recently around turn ${midPoint}). Each compaction discards important context. Create a new session proactively when context feels full.`;
+  }
+
+  private detectTopicShift(session: Session): number {
+    // Simple heuristic: detect when the work type or referenced files change significantly
+    const topics = session.requests.map(r => r.workType || '');
+    let lastTopic = topics[0] || '';
+    for (let i = 3; i < topics.length; i++) {
+      if (topics[i] && topics[i] !== lastTopic) {
+        return i;
+      }
+      if (topics[i]) lastTopic = topics[i];
+    }
+    // Fallback: detect file-path changes
+    const fileSets = session.requests.map(r =>
+      r.referencedFiles[0]?.split('/')[0] || ''
+    );
+    let lastDir = fileSets[0] || '';
+    for (let i = 3; i < fileSets.length; i++) {
+      if (fileSets[i] && fileSets[i] !== lastDir) {
+        return i;
+      }
+      if (fileSets[i]) lastDir = fileSets[i];
+    }
+    return -1;
+  }
+
   getContextRangeAvailability(f?: DateFilter): {
     rangesWithTokens: number[];
     /** Number of sessions matching the non-date filter dimensions. */

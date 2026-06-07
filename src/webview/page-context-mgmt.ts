@@ -75,6 +75,23 @@ export async function renderContextManagement(container: HTMLElement, currentFil
 
       ${renderTips(data.tips)}
 
+      ${data.recommendations.length > 0 ? html`
+        <div style="margin:16px 0;padding:12px 16px;background:rgba(88,166,255,0.06);border:1px solid rgba(88,166,255,0.2);border-radius:8px;">
+          <h4 style="margin:0 0 8px 0;font-size:13px;color:${COLORS.blue};">Recommendations</h4>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${data.recommendations.map(r => html`
+              <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.4;">
+                <span style="color:${COLORS.blue};flex-shrink:0;margin-top:2px;">▸</span>
+                <div>
+                  <span>${r.suggestion}</span>
+                  <span style="color:${COLORS.green};margin-left:6px;">(~${r.expectedTokensSaved.toLocaleString()} tokens saved)</span>
+                </div>
+              </div>
+            `)}
+          </div>
+        </div>
+      ` : ''}
+
       <h3 style="margin-top:24px;display:flex;align-items:center;gap:12px;">
         Context Utilization Trend
         ${data.workspaceTrend.length > 0 && data.trend.length > 1 ? html`

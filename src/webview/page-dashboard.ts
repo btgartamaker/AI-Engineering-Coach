@@ -128,6 +128,7 @@ function renderDashboardMarkup(
     ${scores.length > 0 && html`<section class="dash-section"><div class="dash-section-header"><h3>Anti-Patterns Summary</h3><a href="#" data-page="anti-patterns" style=${'font-size:12px;color:' + COLORS.blue + ';text-decoration:none;'}>View All Anti-Patterns \u2192</a></div><div class="ap-score-grid">${scores.map(g => html`<${PracticeCard} g=${g} />`)}</div></section>`}
     <section class="dash-section"><div class="dash-section-header"><h3>Wasted Effort</h3><a href="#" data-page="corrections" style=${'font-size:12px;color:' + COLORS.blue + ';text-decoration:none;'}>View Details \u2192</a></div><p class="dash-section-desc">Back-and-forth correction loops that waste tokens and time.</p><div id="dashCorrectionContent" class="dash-card"><div style="text-align:center;color:var(--text-muted);font-size:13px;">Loading\u2026</div></div></section>
     <section class="dash-section"><div class="dash-section-header"><h3>Skill Finder</h3><a href="#" data-page="skills" style=${'font-size:12px;color:' + COLORS.blue + ';text-decoration:none;'}>Open Full View \u2192</a></div><p class="dash-section-desc">Scans your prompt history for repeated patterns that waste time re-explaining the same tasks.</p><div id="dashSkillContent" class="dash-card">${!skillCache && html`<div style="text-align:center;"><p style="color:var(--text-muted);margin:0 0 12px 0;font-size:13px;">Analyze your prompt history to discover skill opportunities.</p><button id="dashScanBtn" class="dash-scan-btn">Scan for Skills</button></div>`}</div></section>
+    <section class="dash-section"><div class="dash-section-header"><h3>Context Pressure</h3><a href="#" data-page="config-health" style=${'font-size:12px;color:' + COLORS.blue + ';text-decoration:none;'}>Context Health \u2192</a></div><p class="dash-section-desc">Context window utilization and compaction events.</p><div id="dashContextContent" class="dash-card"><div style="text-align:center;color:var(--text-muted);font-size:13px;">Loading\u2026</div></div></section>
     <section class="dash-section"><div style="display:flex;align-items:baseline;gap:16px;margin-bottom:8px;flex-wrap:wrap;"><h3 style="margin:0;">Daily Activity</h3><div id="activityTabs" class="dash-tabs"><button class=${'dash-tab' + (activeMetric === 'requests' ? ' dash-tab-active' : '')} data-metric="requests">Requests <strong>${formatNum(totalReqs)}</strong></button><button class=${'dash-tab' + (activeMetric === 'sessions' ? ' dash-tab-active' : '')} data-metric="sessions">Sessions <strong>${formatNum(totalSessions)}</strong></button><button class=${'dash-tab' + (activeMetric === 'loc' ? ' dash-tab-active' : '')} data-metric="loc">LoC <strong>${formatNum(totalLoc)}</strong></button><button class=${'dash-tab' + (activeMetric === 'workspaces' ? ' dash-tab-active' : '')} data-metric="workspaces">Workspaces <strong>${formatNum(stats.totalWorkspaces)}</strong></button></div></div><${CanvasEl} id="dailyChart" height=${160} /></section>
     <div class="two-col" style="margin-bottom:16px;"><${CanvasEl} id="wsChart" height=${140} title="Top Workspaces by Requests" /><${CanvasEl} id="harnessChart" height=${140} title="Requests by Harness" /></div>
     <div class="chart-modal-overlay" id="wsChartModal"><div class="chart-modal"><div class="chart-modal-header"><span class="chart-title" style="margin:0;">Top Workspaces by Requests</span><button class="chart-modal-close" id="wsChartModalClose" title="Close">\u00d7</button></div><div class="chart-modal-body"><div style="position:relative;height:360px;"><canvas id="wsChartFull"></canvas></div></div></div></div>
@@ -311,6 +312,9 @@ export async function renderDashboard(container: HTMLElement, currentFilter: Dat
 
   // Load correction data for the Wasted Effort card
   void loadDashCorrections(currentFilter);
+
+  // Load context data for the Context Pressure card
+  void loadDashContext(currentFilter);
 }
 
 /* ── Corrections card ──────────────────────────────────────────────── */
@@ -341,6 +345,35 @@ async function loadDashCorrections(filter: DateFilter): Promise<void> {
     `, el);
   } catch {
     render(html`<div style="text-align:center;color:var(--text-muted);font-size:13px;">Could not load correction data.</div>`, el);
+  }
+}
+
+/* ── Context Pressure card ──────────────────────────────────────────── */
+
+async function loadDashContext(filter: DateFilter): Promise<void> {
+  const el = document.getElementById('dashContextContent');
+  if (!el) return;
+  try {
+    const data = await rpc<import('../core/types').ContextManagementData>('getContextManagement', filter as Record<string, unknown>);
+    const highPct = data.totalSessions > 0 ? Math.round((data.workspaces.filter(w => w.verdict === 'limited').length / data.workspaces.length) * 100) : 0;
+    render(html`
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+        <div style="text-align:center;flex:1;min-width:80px;">
+          <div style="font-size:28px;font-weight:600;color:${data.overallScore >= 80 ? COLORS.green : data.overallScore >= 50 ? COLORS.yellow : COLORS.red};">${data.overallScore}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Context Score</div>
+        </div>
+        <div style="text-align:center;flex:1;min-width:80px;">
+          <div style="font-size:28px;font-weight:600;color:${data.totalCompactions > 10 ? COLORS.red : data.totalCompactions > 0 ? COLORS.yellow : COLORS.green};">${data.totalCompactions}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Compactions</div>
+        </div>
+        <div style="text-align:center;flex:1;min-width:80px;">
+          <div style="font-size:28px;font-weight:600;color:${highPct > 30 ? COLORS.red : highPct > 10 ? COLORS.yellow : COLORS.green};">${highPct}%</div>
+          <div style="font-size:11px;color:var(--text-muted);">Sessions Over 85%</div>
+        </div>
+      </div>
+    `, el);
+  } catch {
+    render(html`<div style="text-align:center;color:var(--text-muted);font-size:13px;">Could not load context data.</div>`, el);
   }
 }
 
