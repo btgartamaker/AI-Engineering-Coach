@@ -100,16 +100,16 @@ export class DashboardAnalyzer extends AnalyzerBase {
     const workspaces = new Map<string, { id: string; name: string }>();
     const wsHarnesses = new Map<string, Set<string>>();
     for (const s of this.sessions) {
-      const key = s.workspaceName;
-      if (!workspaces.has(key)) {
-        workspaces.set(key, { id: key, name: AnalyzerBase.displayWorkspaceName(s.workspaceName) });
-        wsHarnesses.set(key, new Set());
+      const displayName = AnalyzerBase.displayWorkspaceName(s.workspaceName);
+      if (!workspaces.has(displayName)) {
+        workspaces.set(displayName, { id: displayName, name: displayName });
+        wsHarnesses.set(displayName, new Set());
       }
-      wsHarnesses.get(key)!.add(s.harness);
+      wsHarnesses.get(displayName)!.add(s.harness);
       for (const r of s.requests) {
         const ts = r.timestamp;
-        if (ts != null && ts > (lastActivity.get(key) || 0)) {
-          lastActivity.set(key, ts);
+        if (ts != null && ts > (lastActivity.get(displayName) || 0)) {
+          lastActivity.set(displayName, ts);
         }
       }
     }
@@ -222,7 +222,8 @@ export class DashboardAnalyzer extends AnalyzerBase {
     for (const r of reqs) {
       const session = this.requestSessionMap.get(r);
       if (session) {
-        wsCount.set(session.workspaceName, (wsCount.get(session.workspaceName) || 0) + 1);
+        const ws = AnalyzerBase.displayWorkspaceName(session.workspaceName);
+        wsCount.set(ws, (wsCount.get(ws) || 0) + 1);
       }
     }
     const sorted = Array.from(wsCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 20);

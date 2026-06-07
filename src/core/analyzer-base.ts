@@ -35,7 +35,9 @@ export class AnalyzerBase {
 
   protected matchesWorkspaceFilter(session: Session, workspaceId?: string): boolean {
     if (!workspaceId) return true;
-    return session.workspaceId === workspaceId || session.workspaceName === workspaceId;
+    return session.workspaceId === workspaceId
+      || session.workspaceName === workspaceId
+      || AnalyzerBase.displayWorkspaceName(session.workspaceName) === workspaceId;
   }
 
   protected filter(f?: DateFilter): SessionRequest[] {
