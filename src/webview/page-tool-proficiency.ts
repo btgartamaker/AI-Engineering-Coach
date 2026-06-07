@@ -39,9 +39,9 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
 
   render(html`
     <div class="page-header">
-      <h2>Tool Proficiency Score</h2>
+      <h2>Tool &amp; Skill Proficiency</h2>
       <p style="color:var(--text-muted);margin:0;font-size:13px;">
-        Measure your tool diversity and discover tools that can improve your workflow.
+        How effectively you use each skill area. Scores compare your tool usage patterns against benchmarks for your harness.
       </p>
     </div>
 
@@ -51,7 +51,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
       <div style="display:flex;gap:16px;margin-bottom:20px;">
         <div class="card" style="flex:0 0 160px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
           ${ringHtml(data.overallScore, scoreColor(data.overallScore), 100)}
-          <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Tool Proficiency</div>
+          <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Skill Score</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${data.toolsUsed.length} tools used</div>
         </div>
         <div class="card" style="flex:1;padding:16px;">
@@ -70,9 +70,14 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
 
       <!-- Group scores chart -->
       <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Tool Usage by Group</h3>
+        <h3 style="margin:0 0 12px 0;font-size:14px;">Skill Areas</h3>
         <p style="color:var(--text-muted);font-size:12px;margin:0 0 12px 0;">
-          Bars show your usage rate (calls per session) vs. the benchmark for your harness.
+          Your usage rate (calls per session) vs. benchmark for each skill area.
+          <br><span style="font-size:11px;">
+            <strong>file-write</strong>: generating/editing code ·
+            <strong>file-read</strong>: understanding existing code ·
+            <strong>search</strong>: finding relevant code
+          </span>
         </p>
         <${CanvasEl} id="toolGroupChart" height=${220} title="Tool Usage by Group" />
       </div>
@@ -108,7 +113,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
 
       <!-- Tool usage table -->
       <div class="card" style="padding:16px;margin-bottom:20px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">All Tools Used</h3>
+        <h3 style="margin:0 0 12px 0;font-size:14px;">Tool Breakdown</h3>
         <table style="width:100%;font-size:12px;border-collapse:collapse;">
           <thead>
             <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
@@ -134,7 +139,7 @@ async function renderAsync(container: HTMLElement, filter: DateFilter): Promise<
 
       <!-- Weekly Trend -->
       <div class="card" style="padding:16px;">
-        <h3 style="margin:0 0 12px 0;font-size:14px;">Proficiency Trend</h3>
+        <h3 style="margin:0 0 12px 0;font-size:14px;">Skill Trend</h3>
         <${CanvasEl} id="toolTrendChart" height=${160} title="Proficiency Trend" />
         ${data.weeklyTrend.labels.length === 0 ? html`<p style="color:var(--text-muted);font-size:13px;">Not enough data for a trend yet.</p>` : ''}
       </div>
