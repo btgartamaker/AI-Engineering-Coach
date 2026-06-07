@@ -83,6 +83,34 @@ export interface PromptMaturityData {
   samplePrompts: { text: string; grade: string; issues: string[] }[];
 }
 
+/* ---- Prompt Engineering Playbook (Spec 12) ---- */
+export interface PromptExample {
+  originalText: string;
+  improvedText: string;
+  weakness: string;
+  improvementNote: string;
+  tokenSavings?: number;
+  correctionSavings?: number;
+}
+
+export interface PromptPattern {
+  id: string;
+  name: string;
+  description: string;
+  appliesTo: string[];
+  technique: string;
+  userPromptExample: string;
+}
+
+export interface PlaybookData {
+  overallGrade: string;
+  weakestDimension: string;
+  weeklyTrend: { labels: string[]; scores: number[] };
+  personalExamples: PromptExample[];
+  relevantPatterns: PromptPattern[];
+  quickWins: { suggestion: string; impact: 'high' | 'medium' | 'low' }[];
+}
+
 /* ---- Migration Readiness ---- */
 export interface MigrationReadinessData {
   primaryHarness: string;

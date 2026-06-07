@@ -743,6 +743,7 @@ const rpcHandlers: TypedRpcHandlers = {
   getCalendarActivity: (a, _p, params) => a.getCalendarActivity(validateDateFilter(params)),
   getProjectOverview: (a, _p, params) => a.getProjectOverview(validateDateFilter(params)),
   getCorrections: (a, _p, params) => a.getCorrections(validateDateFilter(params)),
+  getPlaybook: (a, _p, params) => a.getPlaybook(validateDateFilter(params)),
   getImageGallery: (a, _p, params) => a.getImageGallery(validateDateFilter(params)),
   getSessionImages: (_a, p, params) => {
     const sessionId = isString(params?.sessionId) ? params.sessionId : '';

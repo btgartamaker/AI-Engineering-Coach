@@ -13,7 +13,7 @@ import {
   AntiPatternData, WorkLifeBalanceResult, StatsResult, HarnessComparisonData,
   WorkflowOptimizationData, ConfigHealthData, FlowStateData, Workspace,
   CalendarActivityData, ProjectOverviewData, ContextManagementData, InsightsData,
-  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData,
+  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData, PlaybookData,
 } from './types';
 import { DashboardAnalyzer } from './analyzer-dashboard';
 import { ProductionAnalyzer } from './analyzer-production';
@@ -26,6 +26,7 @@ import { FlowAnalyzer } from './analyzer-flow';
 import { ContextAnalyzer } from './analyzer-context';
 import { InsightsAnalyzer } from './analyzer-insights';
 import { CorrectionsAnalyzer } from './analyzer-corrections';
+import { PlaybookAnalyzer } from './analyzer-playbook';
 import { ImageAnalyzer, ImageGalleryData } from './analyzer-images';
 import { AnalyzerBase } from './analyzer-base';
 import { errorCore, infoCore, warnCore } from './log';
@@ -42,6 +43,7 @@ export class Analyzer {
   private readonly flow: FlowAnalyzer;
   private readonly context: ContextAnalyzer;
   private readonly corrections: CorrectionsAnalyzer;
+  private readonly playbook: PlaybookAnalyzer;
   private readonly images: ImageAnalyzer;
   private readonly sessions: Session[];
   private readonly editLocIndex: Map<string, Map<string, number>>;
@@ -65,6 +67,7 @@ export class Analyzer {
     this.flow = new FlowAnalyzer(sessions, elIdx, sharedMap);
     this.context = new ContextAnalyzer(sessions, elIdx, sharedMap);
     this.corrections = new CorrectionsAnalyzer(sessions, elIdx, sharedMap);
+    this.playbook = new PlaybookAnalyzer(sessions, elIdx, sharedMap);
     this.images = new ImageAnalyzer(sessions, elIdx, sharedMap);
   }
 
@@ -252,6 +255,10 @@ export class Analyzer {
 
   getCorrections(filter?: DateFilter): CorrectionAnalysisData {
     return this.corrections.analyze(filter);
+  }
+
+  getPlaybook(filter?: DateFilter): PlaybookData {
+    return this.playbook.getPlaybook(filter);
   }
 
   getImageGallery(f?: DateFilter): ImageGalleryData { return this.images.getImageGallery(f); }
