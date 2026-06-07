@@ -262,12 +262,12 @@ export class Analyzer {
 
   getCalendarActivity(f?: DateFilter): CalendarActivityData { return this.dashboard.getCalendarActivity(f); }
 
-  getCorrections(filter?: DateFilter): CorrectionAnalysisData {
-    return this.corrections.analyze(filter);
+  getCorrections(filter?: DateFilter, redact?: boolean): CorrectionAnalysisData {
+    return this.corrections.analyze(filter, redact);
   }
 
-  getPlaybook(filter?: DateFilter): PlaybookData {
-    return this.playbook.getPlaybook(filter);
+  getPlaybook(filter?: DateFilter, redact?: boolean): PlaybookData {
+    return this.playbook.getPlaybook(filter, redact);
   }
 
   getToolProficiency(filter?: DateFilter): ToolProficiencyData {

@@ -742,8 +742,14 @@ const rpcHandlers: TypedRpcHandlers = {
   getContextRangeAvailability: (a, _p, params) => a.getContextRangeAvailability(validateDateFilter(isRecord(params?.filter) ? params.filter : params)),
   getCalendarActivity: (a, _p, params) => a.getCalendarActivity(validateDateFilter(params)),
   getProjectOverview: (a, _p, params) => a.getProjectOverview(validateDateFilter(params)),
-  getCorrections: (a, _p, params) => a.getCorrections(validateDateFilter(params)),
-  getPlaybook: (a, _p, params) => a.getPlaybook(validateDateFilter(params)),
+  getCorrections: (a, _p, params) => a.getCorrections(
+    validateDateFilter(params),
+    params && typeof params.redact === 'boolean' ? params.redact : undefined,
+  ),
+  getPlaybook: (a, _p, params) => a.getPlaybook(
+    validateDateFilter(params),
+    params && typeof params.redact === 'boolean' ? params.redact : undefined,
+  ),
   getToolProficiency: (a, _p, params) => a.getToolProficiency(validateDateFilter(params)),
   getROI: (a, _p, params) => a.getROI(validateDateFilter(params)),
   getPracticePlan: (a, _p, params) => a.getPracticePlan(

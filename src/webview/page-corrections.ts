@@ -33,12 +33,15 @@ const CATEGORY_COLORS: Record<CorrectionCategory, string> = {
   'unknown': '#8b949e',
 };
 
+/** Redact sensitive data in prompts (default: on) */
+let redactEnabled = true;
+
 export async function renderCorrections(container: HTMLElement, currentFilter: DateFilter): Promise<void> {
   render(html`<div class="loading-screen"><div class="loading-spinner"></div><div class="loading-text">Analyzing correction patterns\u2026</div></div>`, container);
 
   let data: CorrectionAnalysisData;
   try {
-    data = await rpc<CorrectionAnalysisData>('getCorrections', currentFilter as Record<string, unknown>);
+    data = await rpc<CorrectionAnalysisData>('getCorrections', { ...currentFilter, redact: redactEnabled } as Record<string, unknown>);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to load correction analysis';
     render(html`<p class="sk-error">Error: ${msg}</p>`, container);
@@ -51,7 +54,17 @@ export async function renderCorrections(container: HTMLElement, currentFilter: D
 
   render(html`
     <div class="corr-header">
-      <h1>Correction Turn Analysis</h1>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 style="margin:0;">Correction Turn Analysis</h1>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;user-select:none;">
+          <input type="checkbox" checked=${redactEnabled} onchange=${() => {
+            redactEnabled = !redactEnabled;
+            renderCorrections(container, currentFilter);
+          }} style="accent-color:${COLORS.green};" />
+          Redact secrets
+          <span style="font-size:10px;opacity:0.7;" title="Hide API keys, tokens, passwords and other sensitive data shown in prompt examples.">ⓘ</span>
+        </label>
+      </div>
       <p class="corr-subtitle">Identify back-and-forth loops where you had to correct the AI — and learn which areas waste the most time and tokens.</p>
     </div>
 

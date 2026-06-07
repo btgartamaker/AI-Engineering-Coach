@@ -12,6 +12,7 @@ import {
 } from './types';
 import { isoWeek } from './helpers';
 import { AnalyzerBase } from './analyzer-base';
+import { redactFields } from './redact';
 
 /* ── Known prompt patterns library ────────────────────────────────── */
 
@@ -298,7 +299,7 @@ function findUsedPatternIds(prompts: string[]): Set<string> {
 
 export class PlaybookAnalyzer extends AnalyzerBase {
 
-  getPlaybook(filter?: DateFilter): PlaybookData {
+  getPlaybook(filter?: DateFilter, redact: boolean = true): PlaybookData {
     const sessions = this.filteredSessions(filter);
     const allPrompts = sessions
       .flatMap(s => s.requests)
@@ -396,7 +397,7 @@ export class PlaybookAnalyzer extends AnalyzerBase {
     // Quick wins
     const quickWins = getQuickWins(sessions.length, overallScore, weakestDimension);
 
-    return {
+    const result: PlaybookData = {
       overallGrade: scoreToGrade(overallScore),
       weakestDimension: weakestDimension.replace(/([A-Z])/g, ' $1').trim(),
       weeklyTrend: { labels: sortedWeeks, scores: weeklyScores },
@@ -404,5 +405,13 @@ export class PlaybookAnalyzer extends AnalyzerBase {
       relevantPatterns: annotatedPatterns,
       quickWins,
     };
+
+    if (redact) {
+      result.personalExamples = result.personalExamples.map(ex =>
+        redactFields(ex, ['originalText', 'improvedText'], { enabled: true })
+      );
+    }
+
+    return result;
   }
 }

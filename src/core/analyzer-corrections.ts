@@ -14,6 +14,7 @@ import {
 } from './types';
 import { AnalyzerBase } from './analyzer-base';
 import { isoWeek } from './helpers';
+import { redactFields } from './redact';
 
 /* ════════════════════════════════════════════════════════════════════
    Correction detection regexes
@@ -51,7 +52,7 @@ export class CorrectionsAnalyzer extends AnalyzerBase {
    * Compute correction analysis for the given sessions.
    * Optionally filters by date range.
    */
-  analyze(filter?: DateFilter): CorrectionAnalysisData {
+  analyze(filter?: DateFilter, redact: boolean = true): CorrectionAnalysisData {
     const sessions: Session[] = this.filteredSessions(filter);
     const allCorrections: CorrectionTurn[] = [];
     const weeklyBuckets = new Map<string, { corrections: number; total: number }>();
@@ -105,7 +106,7 @@ export class CorrectionsAnalyzer extends AnalyzerBase {
       }),
     };
 
-    return {
+    const result: CorrectionAnalysisData = {
       totalCorrectionTurns,
       correctionRate,
       wastedTokens,
@@ -115,6 +116,14 @@ export class CorrectionsAnalyzer extends AnalyzerBase {
       weeklyTrend,
       recentCorrections: allCorrections.slice(-50), // last 50
     };
+
+    if (redact) {
+      result.recentCorrections = result.recentCorrections.map(c =>
+        redactFields(c, ['originalRequest', 'correctionRequests', 'firstResponseSnippet'], { enabled: true })
+      );
+    }
+
+    return result;
   }
 
   /**

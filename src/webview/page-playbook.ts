@@ -21,15 +21,28 @@ export function renderPlaybook(container: HTMLElement, filter: DateFilter): void
   withErrorBoundary('Playbook', container, () => renderPlaybookAsync(container, filter));
 }
 
+/** Redact sensitive data in prompt examples (default: on) */
+let redactEnabled = true;
+
 async function renderPlaybookAsync(container: HTMLElement, filter: DateFilter): Promise<void> {
   render(html`<div class="page-loading">Loading your prompt playbook...</div>`, container);
 
-  const data = await rpc<PlaybookData>('getPlaybook', filter as Record<string, unknown>);
+  const data = await rpc<PlaybookData>('getPlaybook', { ...filter, redact: redactEnabled } as Record<string, unknown>);
 
   render(html`
     <div class="page-header">
-      <h2>Prompt Engineering Playbook</h2>
-      <p style="color:var(--text-muted);margin:0;font-size:13px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h2 style="margin:0;">Prompt Engineering Playbook</h2>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;user-select:none;">
+          <input type="checkbox" checked=${redactEnabled} onchange=${() => {
+            redactEnabled = !redactEnabled;
+            renderPlaybook(container, filter);
+          }} style="accent-color:${COLORS.green};" />
+          Redact secrets
+          <span style="font-size:10px;opacity:0.7;" title="Hide API keys, tokens, passwords and other sensitive data shown in prompt examples.">ⓘ</span>
+        </label>
+      </div>
+      <p style="color:var(--text-muted);margin:8px 0 0 0;font-size:13px;">
         Personalized prompt patterns and improvements based on your data.
         Your overall grade: <strong style="color:${scoreColor(gradeScore(data.overallGrade))}">${data.overallGrade}</strong>
         &middot; Weakest area: <strong>${data.weakestDimension}</strong>
