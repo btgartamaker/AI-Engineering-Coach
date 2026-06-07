@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.15 — Remove Skill Finder, Workspace Display Normalization
+
+- **Removed Skill Finder**: the "Skill Finder" sidebar entry and routing were removed (the page showed AI-triage results for installing skills, which is infrastructure-focused and not actionable for human-in-the-loop coaching)
+- **Workspace name display normalization**: added `displayWsName()` helper to `shared.ts` that strips file paths down to the last path segment for display
+  - **Timeline**: session list, lane labels, tooltips, and session detail all normalize workspace names
+  - **Output**: production "By Workspace" chart labels, token chart dataset labels, and the token table `Workspace` column all normalize
+  - **Context Health**: treemap tiles, detail panel headers, and review section workspace names all normalize
+
 ## 0.2.14 — Playbook & Skills Page UI Polish + Human-in-the-Loop Reframe + Workspace Consolidation
 
 - **Playbook grade display**: the Overall Grade card now shows the letter grade (A, B, C, etc.) prominently alongside the score ring
