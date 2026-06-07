@@ -588,6 +588,35 @@ export interface AntiPatternData {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   AI ROI Dashboard (Spec 15)
+   ═══════════════════════════════════════════════════════════════════ */
+
+export interface ModelROI {
+  modelId: string;
+  totalCost: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalRequests: number;
+  avgCostPerRequest: number;
+  avgInputTokensPerRequest: number;
+  avgOutputTokensPerRequest: number;
+  estimatedTimeSaved: number;
+  loCPerDollar: number;
+  correctionRate: number;
+}
+
+export interface ROIData {
+  periodStart: string;
+  periodEnd: string;
+  totalEstimatedCost: number;
+  totalEstimatedTimeSaved: number;
+  tasksCompleted: number;
+  modelROI: ModelROI[];
+  weeklyCost: { labels: string[]; cost: number[]; timeSaved: number[] };
+  totalAiLoc: number;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    Tool Proficiency Score (Spec 14)
    ═══════════════════════════════════════════════════════════════════ */
 

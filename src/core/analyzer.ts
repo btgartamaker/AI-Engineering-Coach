@@ -13,7 +13,7 @@ import {
   AntiPatternData, WorkLifeBalanceResult, StatsResult, HarnessComparisonData,
   WorkflowOptimizationData, ConfigHealthData, FlowStateData, Workspace,
   CalendarActivityData, ProjectOverviewData, ContextManagementData, InsightsData,
-  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData, PlaybookData, ToolProficiencyData,
+  ParserCoverageData, ParserPreviewData, CorrectionAnalysisData, PlaybookData, ToolProficiencyData, ROIData,
 } from './types';
 import { DashboardAnalyzer } from './analyzer-dashboard';
 import { ProductionAnalyzer } from './analyzer-production';
@@ -28,6 +28,7 @@ import { InsightsAnalyzer } from './analyzer-insights';
 import { CorrectionsAnalyzer } from './analyzer-corrections';
 import { PlaybookAnalyzer } from './analyzer-playbook';
 import { ToolAnalyzer } from './analyzer-tools';
+import { ROIAnalyzer } from './analyzer-roi';
 import { ImageAnalyzer, ImageGalleryData } from './analyzer-images';
 import { AnalyzerBase } from './analyzer-base';
 import { errorCore, infoCore, warnCore } from './log';
@@ -46,6 +47,7 @@ export class Analyzer {
   private readonly corrections: CorrectionsAnalyzer;
   private readonly playbook: PlaybookAnalyzer;
   private readonly tools: ToolAnalyzer;
+  private readonly roi: ROIAnalyzer;
   private readonly images: ImageAnalyzer;
   private readonly sessions: Session[];
   private readonly editLocIndex: Map<string, Map<string, number>>;
@@ -71,6 +73,7 @@ export class Analyzer {
     this.corrections = new CorrectionsAnalyzer(sessions, elIdx, sharedMap);
     this.playbook = new PlaybookAnalyzer(sessions, elIdx, sharedMap);
     this.tools = new ToolAnalyzer(sessions, elIdx, sharedMap);
+    this.roi = new ROIAnalyzer(sessions, elIdx, sharedMap);
     this.images = new ImageAnalyzer(sessions, elIdx, sharedMap);
   }
 
@@ -266,6 +269,10 @@ export class Analyzer {
 
   getToolProficiency(filter?: DateFilter): ToolProficiencyData {
     return this.tools.getToolProficiency(filter);
+  }
+
+  getROI(filter?: DateFilter): ROIData {
+    return this.roi.getROI(filter);
   }
 
   getImageGallery(f?: DateFilter): ImageGalleryData { return this.images.getImageGallery(f); }
